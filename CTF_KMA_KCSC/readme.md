@@ -810,4 +810,4 @@
 
 - Flag: `KMACTF{A_littl3_tricky_chall3ng3}`.
 
-- Sơn ơi Sơn, nếu đchi đọc được dòng này thì đồng chí hãy push file thực thi của challenge `HEA` lên đi nhé, tui sẽ ngồi thử sức xem sao, kiểu tui đọc qua cái phần đó trên wu của đchi hình như đây là một kiểu mã hoá mới nên tui cũng tò mò, tui muốn thử sức nếu mà bản thân mình không biết kiểu mã hoá đấy thì mình có làm được bài đó không. Cảm ơn đồng chí nhiều nhá (^.^).
+- Sơn ơi Sơn, nếu đchi đọc được dòng này thì đồng chí push file thực thi của challenge `HEA` lên đi nhé. Tui sẽ ngồi thử sức xem sao, kiểu tui đọc qua cái phần đó trên wu của đchi hình như đây là một kiểu mã hoá mới nên tui cũng tò mò, tui muốn thử sức nếu mà bản thân mình không biết kiểu mã hoá đấy thì mình có làm được bài đó không. Cảm ơn đồng chí nhiều nhá (^.^).
