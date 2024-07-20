@@ -483,6 +483,8 @@
 
 # Guess.
 
+- Chall: [guess.exe](guess/guess.exe)
+
 ## B1: Đọc hiểu.
 
 - Nhìn qua mã giả của bài này chúng ta thấy bài này khá là ít thao tác, và những hàm trong bài này cũng kiểu quen thuộc (cũng na ná giống RC4 nên về bài này vấn đê đọc hiểu khá là dễ dàng).
@@ -590,4 +592,222 @@
 
 - Flag: `KMA{haycuvotuvalacquanlenemoichilakhongyeuthuongthoisaonuocmatphairoi}`.
 
+# Little_challenge
 
+- Chall: [little_challenge.exe](little_challenge/pack_little_challenge.exe).
+
+## B1: Đọc hiểu.
+
+- Khi ném file này vào DIE thì ta thấy hiện như sau:
+
+    ![alt text](IMG/5/image.png)
+
+    Có một cái dòng nó đỏ đỏ ở đây thông báo cho chúng ta biết là file này đã bị pack, việc của chúng ta là unpack nó nhá (dùng `UPX`).
+
+    Tải `UPX` ở [đây](https://github.com/upx/upx/releases/tag/v4.2.4) và thực hiện unpack file đoá thoai.
+
+    Khi tải file về sẽ dùng như sau:
+
+    ![alt text](IMG/5/image-1.png)
+
+    ![alt text](IMG/5/image-2.png)
+
+    Nếu mà không unpack được file thì chúng ta dùng cmd hoặc powershell (run as administrator) thì sẽ được nhá
+
+    ![alt text](IMG/5/image-3.png)
+
+    Lúc này ta ném vào `DIE` sẽ ko còn dòng chữ đo đỏ nữa:
+
+    ![alt text](IMG/5/image-4.png)
+
+- Ta chạy thử thì thấy chương trình này cần đầu vào:
+
+    ![alt text](IMG/5/image-8.png)
+
+- Quăng vào IDA thì ta thấy đập vào mắt là 2 chương trình với 2 hàm sub, mà click vào mỗi hàm sub thì loạn ko chịu được:
+
+    ![alt text](IMG/5/image-5.png)
+
+    ![alt text](IMG/5/image-6.png)
+
+    ![alt text](IMG/5/image-7.png)
+
+    Có 2 cách để tìm hàm mà thực thi yêu cầu: (1) Tra tìm từ `Wrong secret key!` hoặc tìm hàm sub nào có chuyền argv hoặc một thứ tương tự như argv vào là xong. Sau khi mò ta sẽ được hàm main như sau:
+
+    ![alt text](IMG/5/image-10.png)
+
+    Vậy là bài này sẽ lại là một bài liên quan đến RC4 nữa.
+
+- Tóm lại, đọc xong mã giả thì ta thấy bài trên dựa vào input đề bài cho, thực hiện tạo mảng; thực hiện kiểm tra 3 điều kiện là kiểm tra chiều dài input với `23`, so sánh chuỗi input với `Mai ben nhau ban nhe :)` và một cái hàm sida gì trả về một số `370416652` nữa, nếu vi phạm cả 3 điều kiện trên thì chương trình sẽ thực hiện in `flag` từ `cipher` khai báo ở trên.
+
+## B2: Khai thác.
+
+- Sau khi đọc hiểu xong ở trên thì điều để in ra flag đó chính là chiều dài phải bằng 23 và chuỗi input sẽ là `Mai ben nhau ban nhe :)`. Mía sida ở một chỗ đó chính ta khi chúng ta nhập input là `Mai ben nhau ban nhe :)` thì chương trình không nhận được, cụ thể như sau:
+
+    ![alt text](IMG/5/image-11.png)
+
+    Sau khi tui thử đưa chuỗi trên sang các số thập lục phân rùi tự build lại chương trình thì kết quả flag nhận được cũng chỉ là những byte rác
+
+    `Troll VN`
+
+    Như vậy là bài này đang hướng chúng ta sang một điều khác chứ ko chỉ đơn thuần làm như thế này, chúng ta đã quá ngây thơ roài. Ban đầu khi làm bài này thì đến đây là tui tắc, bí ý tưởng lun roài nhưng mà thực sự bài này là một ý tưởng hoàn toàn khác ở trên đó chính là kĩ thuật đa luồng (`TLS`: Thread Local Storage).
+
+    > Thread-local storage (TLS) là một kỹ thuật trong lập trình đa luồng cho phép các biến được khai báo là local cho mỗi thread. Mỗi thread có một bản sao của các biến này, do đó mỗi thread có thể đọc và ghi các biến này mà không ảnh hưởng đến các thread khác.
+
+    > TLS callback là một hàm được gọi khi một thread được tạo ra hoặc kết thúc. Hàm này có thể được sử dụng để khởi tạo các biến local cho mỗi thread.
+
+    Vậy có những cái dấu hiệu nào để chúng ta có thể biết chương trình của chúng ta đang chạy đa luồng. Trong bài này có 2 cách nhận biết:
+
+    - **Cách 1:** Nhận ra từ hàm `strcmp` trông rất là cồng kềnh:
+
+        ![alt text](IMG/5/image-12.png)
+
+        Như ta biết thì nếu mà hàm `strcmp` thì chỉ cần `strcmp(input, "Mai ben nhau ban nhe :)")` là đủ, mà trong bài này lại còn mấy thứ lâu xâu ở trước đó (đây chỉ là nhận định cá nhân nhưng mà chưa chắc đây là một dấu hiệu nhận biết chuẩn, muốn chuẩn thì sang cách 2).
+    
+    - **Cách 2:** Trong `IDA` mục function thì ta tìm hàm có tên là `TLS`, nếu có những hàm có `TLS` thì khả năng cao là bài đa luồng.
+
+        ![alt text](IMG/5/image-13.png)
+
+        Vào 2 hàm `TlsCallback_1` và `TlsCallback_0` thực hiện đặt breakpoint xem khi chạy chương trình có nhảy vô 2 hàm đó không. Thật không có điều gì bất ngờ khi 2 hàm này được gọi trước hàm `main`.
+
+- Bây giờ ta ngồi phân tích cái `TlsCallback_1`:
+
+    ![alt text](IMG/5/image-14.png)
+
+    Như vậy trong hàm TlsCallBack_1 này sẽ thực hiện check debugger, nếu ta đang **debug** thì chương trình sẽ nhảy tới và thực hiện khối lệnh bên trong, ta thực hiện set IP để nhảy vào bên trong, chú ý là chúng ta trước khi muốn `set IP` ở bên trong thì chúng ta check là debugger, tức là hàm này gọi ra cố tình cho ta khi biết ta đang debug.
+
+    Sau khi chạy xong dòng thứ 13 `lpAddress = (void *)sub_401180(v3->Ldr->InMemoryOrderModuleList.Flink->Flink[2].Flink, 479434334);` thì ra click vào lpAddress lúc này thì thấy:
+
+    ![alt text](IMG/5/image-15.png)
+
+    ![alt text](IMG/5/image-16.png)
+
+    Tui đoán chắc đây đúng là hàm thực hiện chức năng `strcmp`, nhưng nếu mà chúng ta chạy tiếp xuống dòng bên dưới thì sẽ khác (à thực hiện F9 lại chương trình nhé, tui không hiểu là tại sao nếu chúng ta chạy từng câu lệnh rùi kiểm tra ở mỗi câu lệnh thì chương trình ko định nghĩa lại hàm cho chúng ta còn nếu chúng ta chạy hết câu lệnh rùi check một thể thì hàm đó mới được định nghĩa lại):
+
+    ![alt text](IMG/5/image-17.png)
+
+    ![alt text](IMG/5/image-18.png)
+
+    Lúc này strcmp không còn là hàm check string bình thướng nữa mà nó được định nghĩa lại bằng hàm `sub_4015D0` như này.
+
+- Sau khi làm xong thủ tục ở hàm TlsCallback_1 thì ta thực hiện vô hàm main_ khám phá tiếp, sau khi thực hiện nhảy vào hàm `TlsCallback_1` xong thì khi ở trong hàm main_ thì ta thấy strcmp được định nghĩa lại bằng hàm `sub` ở trên, như vậy nó đã có sự khác biệt trong `B1: Đọc hiểu` của chúng ta và bây giờ chúng ta cần suy nghĩ lại, tức là bh cứ gọi hàm strcmp thì nó sẽ được thay thế bằng hàm sub ở trên chứ không phải là hàm so sánh string thông thường.
+
+    ![alt text](IMG/5/image-19.png)
+
+- Thực ra thì trong hàm main_ có mỗi một chỗ gọi hàm strcmp nên chúng ta cũng chỉ cần quan tâm ở chỗ đoá thoai chứ cũng chả cần phải suy nghĩ lại từ đâu, và nó ở đoạn kiểm tra điều kiện để in ra sai, với những biến truyền vào hàm sub đó là `input` và `Mai ben nhau ban nhe :)`.
+
+    ![alt text](IMG/5/image-20.png)
+
+- Bây giờ chúng ta ngồi phân tích hàm `sub_4015D0` này:
+
+    Nhìn vô dòng thứ 13 `v7 = IsDebuggerPresent() ^ 0xAA;`
+
+    > `IsDebuggerPresent` là một hàm của Windows, nó kiểm tra xem chương trình có đang bị debug hay không. Đây dường như là cách chống debug đơn giản nhất.
+
+    > Điều thú vị xảy ra khi `IsDebuggerPresent` trả về `0` (chương trình không bị debug) và trả về 1 (chương trình đang bị debug).
+
+    Vậy đến lúc này ta nên để là `0` hay là `1` (quá sida để lựa chọn, nếu bí quá thì chạy cả 2 TH xem TH nào ra kết quả đẹp đẹp thì chọn), nhưng nếu mà chúng ta thử logic với cái hàm `TlsCallback_1` ở trên thì đoạn này chúng ta phải để là số 1, bởi vì trước khi muốn nhảy vào những điều kiện của hàm `TlsCallback_1` ta đã bước qua một đoạn check là debugger (và hàm đó check là debugger nên mới check điều kiện tiếp), nên ở đây chúng ta phải giữ nguyên là `1` chứ ko được sửa lại thành `0` (phỏng đoán cá nhân thoai, lúc làm xong roài tui mới có những cái suy nghĩ mang tính chất logic lại toàn bộ bài toán để đúc rút ra kinh nghiệm cho những lần sau chứ lúc làm bài ta tui mò chay ở trên nhá, đó là thử cả 2 TH).
+
+    ![alt text](IMG/5/image-21.png)
+
+    Tui nghĩ đến đây là một bài RC4 quá là quen thuộc roài nên tự làm để tìm ra input để hàm này trả về kết quả là đúng nhé. Source code python tui sẽ để ở đây:
+
+    ```python
+    MBNBN = [
+        0x4D, 0x61, 0x69, 0x20, 0x62, 0x65, 0x6E, 0x20, 0x6E, 0x68, 
+        0x61, 0x75, 0x20, 0x62, 0x61, 0x6E, 0x20, 0x6E, 0x68, 0x65, 
+        0x20, 0x3A, 0x29
+    ]   # Mai ben nhau ban nhe :)
+
+    buf2 = [
+        0xE3, 0x2E, 0xD0, 0xA6, 0xD6, 0x7D, 0x54, 0x3F, 0xAC, 0x0F, 
+        0x24, 0x10, 0x9C, 0xCB, 0x26, 0xBC, 0xB3, 0x89, 0x84, 0x24, 
+        0x80, 0xBD, 0x48
+    ]   # 0019FE78
+
+    def RC4_map(key):  
+        map = []
+        for i in range(256): map.append(i)
+        tmp = 0
+        for i in range(256):
+            tmp = (key[i % len(key)] + map[i] + tmp) %  256
+            map[i], map[tmp] = map[tmp], map[i]
+        return map
+
+    def RC4_en(map, data):
+        tmp1, tmp2 = 0, 0
+        for i in range(len(data)):
+            tmp1 = (tmp1 + 1) % 256
+            tmp2 = (map[tmp1] + tmp2) % 256
+            map[tmp1], map[tmp2] = map[tmp2], map[tmp1]
+            data[i]  ^= map[(map[tmp1] + map[tmp2]) % 256]
+        return data
+
+    def input_xor(data):
+        for i in range(len(data)):
+            data[i] ^= 0xAB
+        return data
+
+    if __name__ == "__main__":
+        map = RC4_map(MBNBN)
+        ans = RC4_en(map, buf2)
+        ans = input_xor(ans)
+        ans = [chr(x) for x in ans]
+        for i in range(len(ans)): print(ans[i], end = '')
+    ```
+
+- Kết thúc bước 2 tại đây.
+
+## B3: Tìm flag.
+
+- Sau khi xong B2 ta được input chuẩn là `9FPIU6vUxfQOHaisOChDY1F` thì việc tìm flag chỉ là thủ tục. Tui để source code python ở đây:
+
+    ```python
+    cipher = [
+        0x40, 0x46, 0xCE, 0xA9, 0x8C, 0xC4, 0x6D, 0x80, 0x5F, 0xB1, 
+        0xFE, 0x0F, 0xC2, 0x7E, 0xAA, 0x17, 0xC2, 0xF7, 0x34, 0x27, 
+        0x62, 0x0A, 0x99, 0xAC, 0x58, 0x30, 0xC1, 0xAC, 0x1D, 0x10, 
+        0xED, 0x8A, 0xCE
+    ]
+
+    input_chuan = [
+        0x39, 0x46, 0x50, 0x49, 0x55, 0x36, 0x76, 0x55, 0x78, 0x66,
+        0x51, 0x4f, 0x48, 0x61, 0x69, 0x73, 0x4f, 0x43, 0x68, 0x44,
+        0x59, 0x31, 0x46
+    ]   # 9FPIU6vUxfQOHaisOChDY1F
+
+    def RC4_map(key):  
+        map = []
+        for i in range(256): map.append(i)
+        tmp = 0
+        for i in range(256):
+            tmp = (key[i % len(key)] + map[i] + tmp) %  256
+            map[i], map[tmp] = map[tmp], map[i]
+        return map
+
+    def RC4_en(map, data):
+        tmp1, tmp2 = 0, 0
+        for i in range(len(data)):
+            tmp1 = (tmp1 + 1) % 256
+            tmp2 = (map[tmp1] + tmp2) % 256
+            map[tmp1], map[tmp2] = map[tmp2], map[tmp1]
+            data[i]  ^= map[(map[tmp1] + map[tmp2]) % 256]
+        return data
+
+    def input_xor(data):
+        for i in range(len(data)):
+            data[i] ^= 0xAB
+        return data
+
+    if __name__ == "__main__":
+        map = RC4_map(input_chuan)
+        ans = RC4_en(map, cipher)
+        ans = [chr(x) for x in ans]
+        for i in range(len(ans)): print(ans[i], end = '')
+    ```
+
+    ![alt text](IMG/5/image-22.png)
+
+- Flag: `KMACTF{A_littl3_tricky_chall3ng3}`.
+
+- Sơn ơi Sơn, nếu đchi đọc được dòng này thì đồng chí hãy push file thực thi của challenge `HEA` lên đi nhé, tui sẽ ngồi thử sức xem sao, kiểu tui đọc qua cái phần đó trên wu của đchi hình như đây là một kiểu mã hoá mới nên tui cũng tò mò, tui muốn thử sức nếu mà bản thân mình không biết kiểu mã hoá đấy thì mình có làm được bài đó không. Cảm ơn đồng chí nhiều nhá (^.^).
