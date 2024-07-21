@@ -1,0 +1,33 @@
+# 123456789012345678901234567890
+# KCSC{correct_flag!submit_now!}
+# tungdvantungdvantungdvan
+# KCSC{tungdvantungdvantungdvan}
+
+flag_en = [
+    0x44, 0x93, 0x51, 0x42, 0x24, 0x45, 0x2E, 0x9B, 0x01, 0x99, 
+    0x7F, 0x05, 0x4D, 0x47, 0x25, 0x43, 0xA2, 0xE2, 0x3E, 0xAA, 
+    0x85, 0x99, 0x18, 0x7E
+]
+
+RIPC = [
+    0x72, 0x65, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6E, 0x67, 0x5F, 
+    0x69, 0x73, 0x5F, 0x70, 0x72, 0x65, 0x74, 0x74, 0x79, 0x5F, 
+    0x63, 0x6F, 0x6F, 0x6C
+]   # reversing_is_pretty_cool
+
+def solve(input):
+    ans = []
+    for i in range(len(input)):
+        tmp = 16 * (input[i] % 16) + input[i] // 16
+        tmp ^= RIPC[i]
+        ans.append(tmp)
+    return ans
+
+def solve_rev():
+    for i in range(len(flag_en)): flag_en[i] ^= RIPC[i]
+    for i in range(len(flag_en)):
+        for j in range(256):
+            if flag_en[i] == 16 * (j % 16) + j // 16: print(chr(j), end = '')
+
+if __name__ == "__main__":
+    solve_rev()
