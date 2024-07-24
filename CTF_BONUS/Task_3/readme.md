@@ -4,7 +4,7 @@
 
 - Bài cung cấp cho ta 1 file thực thi và một 1 file ảnh.
 
-## Phần 1: Đọc hiểu.
+## Phần 1: Test.
 
 - Trong bài này thì file thực thi không yêu cầu chúng ta điền gì khi chạy chương trình nên hầu như là chúng ta sẽ phải tự đoán, mọi khi thì một là khi chạy chương trình sẽ nhập sau khi chạy chương trình hoặc là nếu truyền vào file thực thi thì nó sẽ hiện cho ta cú pháp truyền vô nhưng chall này thì không làm điều đó, điều chúng ta cần làm là đoán là chính.
 
@@ -50,7 +50,7 @@
 
 - Như vậy tóm lại, chương trình sẽ cần 2 tham số truyền vào, tham số đầu tiên là file ảnh, tham số tiếp theo là key. Chương trình sẽ thực hiện lưu key dưới dạng bit rùi lần lượt ghi những giá trị key đó vào trong file ảnh kia tại những vị trí cố định cho trước (cụ thể là từ byte thứ 54 với bước nhảy mỗi vị trí là 3).
 
-## Phần 2: Khai thác.
+## Phần 2: Nhặt thông tin.
 
 - Source code đọc từng byte của ảnh:
 
@@ -155,3 +155,63 @@
     ![alt text](IMG/1/image-14.png)
 
 - Flag: `flag{dont_forget_the_treasure}`.
+
+# F81E37E841D0B2C1D5738A7D60FD98BE
+
+- Chall: [file](chall/F81E3__/F81E37E841D0B2C1D5738A7D60FD98BE.rar).
+
+## Phần 1: Test.
+
+- Mở mã giả và ta đọc, có thể tóm lược lại như sau:
+
+    ![alt text](IMG/2/image-1.png)
+
+- Khi chạy chương trình thì chương trình sẽ bắt chúng ta nhập key, đọc mã giả thì ta thấy key của chúng ta là `signed char` và có giá trị từ **-128** đến **127**. Vậy tức là chúng ta cần nhập đúng form của key và phải nhập 5 lần. Sau đó thì chương trình sẽ thực hiện xor từng giá trị của `flag_en` với từng giá trị của `input` chúng ta xong rùi in ra giá trị đó, và đó chính là `flag` nếu ta nhập đúng key.
+
+- Thấy chương trình thì ra thấy có 13 vòng lặp, `flag_en[i] ^= key[i % 5]`, còn đến cái `flag_en[i + 1]` thì nó xor với một giá trị cực kì là khó đọc, nhưng ra biết nó là một phần từ của key, chạy mã máy và xem thanh ghi phát là biết ngay phần tử đó là `key[(i + 1) % 5]`.
+
+    ![alt text](IMG/2/image-2.png)
+
+- Vậy tóm lại bài sẽ bắt ta nhập 5 key (có giá trị từ **-128** đến **127**) sau đó chương trình sẽ thực hiện xor lần lượt theo quy tắc `flag_en[i] ^= key[i % 5]` và `flag_en[i + 1] ^= key[(i + 1) % 5]`. Rùi thực hiện in `flag_en` ra màn hình.
+
+## Phần 2: Nhặt thông tin.
+
+- Flag_en có giá trị như sau:
+
+    ```python
+    flag_en = [
+        0x62, 0x64, 0x6E, 0x70, 0x51, 0x61, 0x69, 0x7C, 0x6E, 0x75, 
+        0x66, 0x69, 0x6D, 0x6E, 0x75, 0x67, 0x60, 0x6E, 0x7B, 0x46, 
+        0x61, 0x66, 0x68, 0x72
+    ]
+    ```
+
+## Phần 3: Tìm flag.
+
+- Do bài này chúng ta biết có cú pháp là `flag{}` nên chúng ta đã biết luôn được 5 byte sau khi thực hiện xor là `0x66`, `0x6c`, `0x61`, `0x67`, `0x7b`. Vậy lúc này ta thực hiện xor ngược lại với flag_en ở trên là có thể tìm được key.
+
+    ```python
+    print(0x66 ^ 0x62)  # key[0]
+    print(0x6c ^ 0x64)  # key[1]
+    print(0x61 ^ 0x6e)  # key[2]
+    print(0x67 ^ 0x70)  # key[3]
+    print(0x7b ^ 0x51)  # key[4]
+    ```
+
+    ![alt text](IMG/2/image-3.png)
+
+- Flag: `flag{easy_baby_challenge}`.
+
+- **Bonus:**
+
+    ![alt text](IMG/2/image-4.png)
+
+    Khi nhìn vào `v5[1]` thực sự là tui chả hiểu nó đang làm gì nhưng sau khi tham khảo wu của đchi Vũ Hải Sơn thì đchi đó có một cách giải thích cho dòng này tui thấy khá là hay và bổ ích.
+
+    ```python  
+        v6 - 5 * (&v5[1 - &flag_en] / 5) + 1
+    ->  i - 5 * (&flag_en + i + 1 - flag_en) / 5 + 1
+    ->  i - 5 * (i + 1) / 5 + 1
+    ->  [i + 1] - [5 * (i + 1) / 5]
+    ->  (i + 1) % 5
+    ```
