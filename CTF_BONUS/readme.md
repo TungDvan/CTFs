@@ -367,3 +367,12 @@
 - Flag: `KMACTF{how_do_you_feel_now}`.
 
 - Chú ý: nếu ở ở map của bạn phần tử kia bạn lấy trong file thực thi mà chúng ta tự tạo thì sẽ ra kết quả là: `KMACTF{how^do_you_feel_now|` và nó ko phải là flag.
+
+# 4_BACKER
+
+- Chall: [FILE](CCHALL/4_BACKER.rar).
+
+- Đây là một bài hash sha-256 [Dont_Call_Me_Kamui_DONE](https://github.com/DecemberRecruitment/SSB3YW50IHRvIGJlY29tZSBhIG1lbWJlciBvZiB0aGUgS0NTQyBjbHViLg-/tree/master/KCSC_RECRUITMENT_2023#two_faces).
+
+- Flag: `KMACTF{do_you_like_it}`.
+
