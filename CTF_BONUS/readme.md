@@ -224,19 +224,19 @@
 
 - Bài này cho chúng ta file thư viện `.dll` thay vì cho chúng ta file thực thi, lúc ta ném vào IDA thì thấy trong thư viện có một hàm `check`:
 
-    ![alt text](IMG\3\image.png)
+    ![alt text](IMG/3/image.png)
 
 - Khi ta click vào thì dường như đây là một chương trình check input đầu vào:
 
-    ![alt text](IMG\3\image-1.png)
+    ![alt text](IMG/3/image-1.png)
 
 - Và đây là nội dung của hàm `func_en`:
 
-    ![alt text](IMG\3\image-2.png)
+    ![alt text](IMG/3/image-2.png)
 
     Hàm `func_xor`:
 
-    ![alt text](IMG\3\image-5.png)
+    ![alt text](IMG/3/image-5.png)
 
 - Đến đây tui thấy hơi khó nếu mà không debug nên tui chọn cách sẽ tạo một chương trình C đơn giản rùi import thư viện vào gọi hàm check rùi tiến hành debug từ file thực thi đóa.
 
@@ -279,9 +279,9 @@
 
 - Ví dụ minh họa như sau:
 
-    ![alt text](IMG\3\image-3.png)
+    ![alt text](IMG/3/image-3.png)
 
-    ![alt text](IMG\3\image-4.png)
+    ![alt text](IMG/3/image-4.png)
 
 - Nên ta sẽ lấy thông tin từ file `.dll` này.
 
