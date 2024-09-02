@@ -12,13 +12,13 @@
 
 - Ban đầu input chúng ta nhập vào sẽ được thực hiện biến đổi thông qua một vòng lặp với 20 lần ([400/21] = 20), vậy ta có thể đoán lun được là input đầu vào cần có 20 kí tự:
 
-    ![alt text](img/1/image.png)
+    ![alt text](IMG/1/image.png)
 
     Chúng ta dễ dàng viết lại hàm này, do phần lấy dữ liệu từ những biến được khai báo trước của tui khá là chậm nên đến đoạn này tui xử lý có hơi lúng túng và mất thời gian.
 
     Ví dụ như muốn lấy data như sau:
 
-    ![alt text](img/1/image-2.png)
+    ![alt text](IMG/1/image-2.png)
 
     Ta thấy `data_x2` bắt đầu từ địa chỉ `000000BAE999F250` và có 20 giá trị `data_x2`, mỗi phần tử của mảng `data_x2` chứa 4 byte vậy nên địa chỉ kết thức là: 0x000000BAE999F250 + 4 * 0x14 - 1= `000000BAE999F29F`.
 
@@ -171,17 +171,17 @@ for i in range(len(ans)):
 
 - Tiếp theo có một hàm `anti_debug` check xem có phải là đang debug hay không, tui thực hiện `set IP` để có pass qua:
 
-    ![alt text](img/1/image-3.png)
+    ![alt text](IMG/1/image-3.png)
 
 - Ở trên check debug xong thì chương trình ở dưới thì check thêm phát nữa, nếu không debug thì giá trị mảng `v22` được thay đổi bằng các giá trị mảng `v23`, còn không thì giữ nguyên.
 
-    ![alt text](img/1/image-4.png)
+    ![alt text](IMG/1/image-4.png)
 
     Thực ra các giá trị của mảng `v22` hoặc `v23` tui đoán là để mã hóa `md5`, tại nó là những giá trị cố định xong ở bên dưới nó cũng dùng trong quá trình mã hóa `md5`.
 
 - Phần tiếp theo của chương trình:
 
-    ![alt text](img/1/image-6.png)
+    ![alt text](IMG/1/image-6.png)
 
     Ở phần này sẽ thực hiện tách 4 kí tự một của phần **biến đổi input ở trên** rùi thực hiện mã hóa MD5 xong lưu vào biến `md5_input`, rùi vòng for để lấy ra phần flag đã mã hóa `md5`, sau đó thực kiện check giá trị `md5_input` với giá trị `flag_en`, nếu không giống sẽ thực hiện in ra `Something unto death` ra thoát chương trình. Vậy việc của chúng ta chỉ đơn giản là ngồi thay đổi cờ và lấy hết các giá trị của `flag_en` thui. Khi lấy được ta sẽ được như sau:
 
