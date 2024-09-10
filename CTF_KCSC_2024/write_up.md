@@ -4,9 +4,9 @@
 
 Xin chào mọi người, `write_up` này của mình là nơi viết ra suy nghĩ cá nhân của mình khi tiếp cận một bài khi mình lần đầu tiếp xúc, nên sẽ có một chút hơi dài dòng và sẽ có một số chỗ mang tính cá nhân xíu (nên có thể có chút nhầm lẫn). Mọi thứ đều mang tính chất tham khảo. Tui sẽ dẫn dắt các bạn theo dòng suy nghĩ của tui khi làm bài (nó sẽ rất là dài dòng và lòng thòng). Nên nếu các bạn muốn tìm một `write_up` để lấy ý tưởng nhanh gọn hay chỉ đơn giản là làm sao để có flag nhanh thì tui nghĩ `write_up` này không phù hợp với các bạn. Đọc đến đây các bạn cũng thấy sự dài dòng của tui rùi đúng không? Vậy hãy bắt luôn đi @@.
 
-## re_f@k3.
+## 1_RE_F@K3.
 
-- Chall: [f@k3](Fake\re_fk3.exe).
+- Chall: [FILE](CHALL/1_RE_F@K3.rar).
 
 ### Phần đọc hiểu: 
 
@@ -285,5 +285,144 @@ Xin chào mọi người, `write_up` này của mình là nơi viết ra suy ngh
 
 Tui muốn gửi lời cảm ơn đến đồng chí Vũ Hải Sơn vì đã dành thời gian và sự hỗ trợ để giúp tui giải quyết bài này.
 
+## 2_RE_RUST.
 
+- Chall: [FILE](CHALL/2_RE_RUST.rar).
 
+- Đây là một bài mã hóa `file`, và được làm khó bởi RUST. Bây giờ mình mới tiếp cận đến dạng bài này, sau khi được sự hỗ trợ của bạn mình cách tìm hàm trong những bài rust thì mình đã có thể làm được dạng bài này.
+
+    ![alt text](image.png)
+
+    Thì để làm những dạng bài về rust thì chúng ta thực hiện đặt lại tên và cách tìm tên hay nội dung chính của hàm là phần ngay bên cạnh cái dãy loàng ngà loằng ngoằng kia.
+
+- Sau khi thực hiện đặt lại tên rùi thì chúng ta đến với bài này.
+
+    ![alt text](image-1.png)
+
+- Trước tiên chương trình sẽ thực hiện đọc một file có tên là `flag.txt`, nếu không có file này thì chương trình sẽ thực hiện in ra và thoát chương trình. Xong sẽ thực hiện mã hóa 4 lần tương ứng với `phase1`, `phase2`, `phase3`, `phase4`.
+
+- **Phase1:**
+
+    ![alt text](image-2.png)
+
+    Thực hiện kết hợp debug thì chúng ta dẽ dàng nhận ra `*(_QWORD *)&v9.gap0[8]` đóng vai trò như một biến để đánh dấu vị trí của chuỗi và `data.data_ptr[*(_QWORD *)&v9.gap0[8]]` đóng vai trò như là giá trị trong chuỗi ở vị trí thứ `*(_QWORD *)&v9.gap0[8]`. Sau khi biết được như như thế thì ta hoàn toàn có thể biết được nội dung của hàm phase1 chỉ đơn giản là đảo ngược lại tất cả các giá trị.
+
+    Tóm gọm nội dung của hàm đó như sau:
+
+    ```python
+    def phase_1(data):
+        for i in range(0, len(data) // 2):
+            data[i], data[len(data) - 1 - i] = data[len(data) - 1 - i], data[i]
+    ```
+
+- **Phase2:**
+
+    ![alt text](image-3.png)
+
+    Hàm này có chức năng là thực hiện đảo byte của 2 giá trị cạnh nhau:
+
+    VD: `0xAB, 0xCD` thì sau hàm này ta được 2 giá trị mới là` 0xAD, 0xCB`.
+
+    Tóm gọm nội dung của hàm phase2 như sau:
+
+    ```python
+    def phase_2(data):
+        for i in range(0, len(data), 2):
+            tmp1 = data[i + 1] & 0xF | data[i] & 0xF0
+            tmp2 = data[i] & 0xF | data[i + 1] & 0xF0
+            data[i] = tmp1
+            data[i + 1] = tmp2
+    ```
+
+- **Phase3:**
+
+    ![alt text](image-4.png)
+
+    Khi mình làm đến `phase3` thì mình thấy khá là khó hiểu, thực hiện đọc mã máy và giá trị các thanh ghi thì mình rút ra được nội dung của `phase3` như sau:
+
+    Chương trình sẽ thực hiện lấy 2 giá trị thứ `i` và `i + 2` trong đó i chạy từ `0` đến `len(data) - 2`. Ban đầu sẽ lấy `data[i] - data[i + 2]` gán lại cho `data[i]`, nếu `data[i]` `>` `data[i + 2]` thì làm phép trừ như bình thường, còn nếu `data[i]` `<` `data[i + 2]` thì sẽ thực hiện cộng thêm 256, ví dụ như sau:
+
+        ![alt text](image-5.png)
+
+        ![alt text](image-6.png)
+
+        Ta thấy ở trên thì 0x66 - 0x69 = -3, -3 + 256 = 253 = 0xFD.
+
+    Sau khi đã gán giá trị mới vào `flag[i]` thì nó thực hiện gán lại tương tự với `flag[i + 2]` = `flag[i + 2]` - `flag[i]`.
+
+    Như vậy ta có thể tóm gọn lại nội dung của phase3 như sau:
+
+    ```python
+    def phase_3(data):
+        for i in range(len(data) - 2):
+            if data[i] - data[i + 2] < 0: data[i] = data[i] - data[i + 2] + 256
+            else: data[i] = data[i] - data[i + 2]
+            if data[i + 2] - data[i] < 0: data[i + 2] = data[i + 2] - data[i] + 256
+            else: data[i + 2] = data[i + 2] - data[i]
+    ```
+
+- **Phase4:**
+
+    ![alt text](image-7.png)
+
+- `Thread_rng()` trong Rust tạo ra một bộ sinh số ngẫu nhiên gắn liền với luồng (thread-local RNG), còn `gen()` là hàm sinh ra giá trị ngẫu nhiên. Như vậy đây là một phần để sinh ra giá trị ngẫu nhiên và gán lại cho v2, ví dụ v2 = 0xABCDEF12 thì nội dung của hàm này là thực hiện lấy từng giá trị của data xor với từng byte trong v2. Như sau `data[i] = data[i] ^ 0xAB ^ 0xCD ^ 0xEF ^ 0x12`.
+
+- Sau khi biết chức năng của mỗi hàm thì thực hiện làm ngược lại của 4 phase này không khó, điều khiến mình tốn thời gian nhất thi thực hiện làm ngược lại đó chính là `phase4`, vì thực hiện `xor` 4 giá trị nếu mà mình `brute force` thì sẽ là 256 ^ 4 = 4,3 tỷ TH. Nếu 10^6 thao tác trong 1s thì mất hơn 4300s và chỉ có niệm thoai. Sau khi được gợi ý thì mình nhận ra là dô phép `xor` không quan trong thứ tự, 1 ^ 2 = 2 ^ 1 nên mình có thể gộp việc `xor` 4 byte với nhau thành một phần và chắc chắn phần đó sẽ có giá trị từ `0` đến `0xFF`, tuyệt vời ông mặt trời.
+
+- Sau khi được gợi ý điều đó thì bắt tay viết source thoai:
+
+    ```python
+    f = open('flag.enc', 'rb')
+    bytes = f.read(1)
+    flag_en1 = []
+    while bytes:
+        tmp = int.from_bytes(bytes, 'big')
+        flag_en1.append(tmp)
+        bytes = f.read(1)
+
+    def rev_4(data, num):
+        for i in range(len(data)):
+            data[i] = data[i] ^ num
+
+    def rev_3(data):
+        for i in range(len(data) - 3, -1, -1):
+            if data[i + 2] + data[i] >= 256: data[i + 2] = data[i + 2] + data[i] - 256
+            else: data[i + 2] = data[i + 2] + data[i]
+            if data[i] + data[i + 2] >= 256: data[i] = data[i] + data[i + 2] - 256
+            else: data[i] = data[i] + data[i + 2]
+
+    def rev_2(data):
+        for i in range(0, len(data), 2):
+            tmp1 = data[i + 1] & 0xF | data[i] & 0xF0
+            tmp2 = data[i] & 0xF | data[i + 1] & 0xF0
+            data[i] = tmp1
+            data[i + 1] = tmp2
+
+    def rev_1(data):
+        for i in range(0, len(data) // 2):
+            data[i], data[len(data) - 1 - i] = data[len(data) - 1 - i], data[i]
+
+    def copy_arr():
+        ans = []
+        for i in flag_en1:
+            ans.append(i)
+        return ans
+
+    if __name__ == '__main__':
+        for _ in range(256):
+            flag_en = copy_arr()
+            rev_4(flag_en, _)
+            rev_3(flag_en)
+            rev_2(flag_en)
+            rev_1(flag_en)
+            for i in flag_en: print(end = chr(i))
+            print()
+    ```
+
+    ![alt text](image-8.png)
+
+- Flag:
+
+    ```txt
+    KCSC{r3v3rs3_rust_1s_funny_4nd_34sy_227da29931351}
+    ```
