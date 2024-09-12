@@ -372,7 +372,26 @@
 
 - Chall: [FILE](CCHALL/4_BACKER.rar).
 
-- Đây là một bài hash sha-256 [Dont_Call_Me_Kamui_DONE](https://github.com/DecemberRecruitment/SSB3YW50IHRvIGJlY29tZSBhIG1lbWJlciBvZiB0aGUgS0NTQyBjbHViLg-/tree/master/KCSC_RECRUITMENT_2023#two_faces).
+- Đây là một bài hash sha-256, na ná giống bài [này](https://github.com/DecemberRecruitment/SSB3YW50IHRvIGJlY29tZSBhIG1lbWJlciBvZiB0aGUgS0NTQyBjbHViLg-/tree/master/KCSC_RECRUITMENT_2023#two_faces).
 
 - Flag: `KMACTF{do_you_like_it}`.
 
+# 5_ANTI_1.
+
+- Chall: [FILE](CHALL/5_ANTI_1.rar).
+
+- Mình sẽ viết wu sau.
+
+# 6_VM_CODE.
+
+- Chall: [FILE](CHALL/6_VM_CODE.rar).
+
+- Bài này mình thực hiện debug bằng tay chay nên có gì wu rút ra source code mình sẽ viết sau, tóm tắt quá trình như trên hình ảnh sau để ra flag:
+
+    ![alt text](IMG/6/image.png)
+
+- Flag:
+
+    ```txt
+    VMC0d3_1s_ch4113n93_b19_h4nds!
+    ```

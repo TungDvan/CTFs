@@ -342,11 +342,11 @@ Tui muốn gửi lời cảm ơn đến đồng chí Vũ Hải Sơn vì đã dà
 
     Chương trình sẽ thực hiện lấy 2 giá trị thứ `i` và `i + 2` trong đó i chạy từ `0` đến `len(data) - 2`. Ban đầu sẽ lấy `data[i] - data[i + 2]` gán lại cho `data[i]`, nếu `data[i]` `>` `data[i + 2]` thì làm phép trừ như bình thường, còn nếu `data[i]` `<` `data[i + 2]` thì sẽ thực hiện cộng thêm 256, ví dụ như sau:
 
-        ![alt text](_IMG/2/image-5.png)
+    ![alt text](_IMG/2/image-5.png)
 
-        ![alt text](_IMG/2/image-6.png)
+    ![alt text](_IMG/2/image-6.png)
 
-        Ta thấy ở trên thì 0x66 - 0x69 = -3, -3 + 256 = 253 = 0xFD.
+    Ta thấy ở trên thì 0x66 - 0x69 = -3, -3 + 256 = 253 = 0xFD.
 
     Sau khi đã gán giá trị mới vào `flag[i]` thì nó thực hiện gán lại tương tự với `flag[i + 2]` = `flag[i + 2]` - `flag[i]`.
 
