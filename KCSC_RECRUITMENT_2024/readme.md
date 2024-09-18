@@ -396,11 +396,489 @@
 
 # 6_SHELTER (Medium)
 
-- Chall: [FILE](0_CHALL/6_SHELTER.rar).
+- Chall: [FILE](0_CHALL/6_SHELTER.rar).-->
+
+
 
 # 7_JUST_NOT_A_SIMLE_FLAG_CHECKER (hard)
 
-- Chall: [FILE](0_CHALL/7_JUST_NOT_A_SIMLE_FLAG_CHECKER.rar).-->
+- Chall: [FILE](0_CHALL/7_JUST_NOT_A_SIMLE_FLAG_CHECKER.rar).
+
+- Đây là một bài check flag với tưởng chính là sử dụng `stack`.
+
+- Với chall này thì chỉ cần bạn cứ mem theo các giá trị ở thanh ghi khi debug thui là sẽ hiểu được ý định của chương trình. Vậy nên mình sẽ giải thích các chức năng chính của một số hàm thui vì bài này chỉ cần dựng lại được chương trình là hoàn toàn có thể làm ngược lại được và ra flag.
+
+    ```C
+    int __cdecl main(int argc, const char **argv, const char **envp)
+    {
+    _BYTE *new_Node; // rax
+    __int64 v4; // rdx
+    __int64 v5; // r8
+    _BYTE *node; // rax
+    _BYTE *v7; // rax
+    _BYTE *v8; // rax
+    __int64 v9; // rdx
+    __int64 v10; // r8
+    char v11; // al
+    __int64 v12; // rdx
+    __int64 v13; // r8
+    int k; // [rsp+20h] [rbp-108h]
+    int m; // [rsp+24h] [rbp-104h]
+    int i; // [rsp+28h] [rbp-100h]
+    int j; // [rsp+2Ch] [rbp-FCh]
+    int n; // [rsp+34h] [rbp-F4h]
+    int v20; // [rsp+38h] [rbp-F0h]
+    __int64 len_input; // [rsp+40h] [rbp-E8h]
+    int v22; // [rsp+4Ch] [rbp-DCh]
+    _BYTE *v23; // [rsp+70h] [rbp-B8h]
+    _QWORD *stack_tmp2; // [rsp+78h] [rbp-B0h] BYREF
+    _QWORD *stack_tmp1; // [rsp+80h] [rbp-A8h] BYREF
+    _QWORD *stack_flag_en; // [rsp+88h] [rbp-A0h] BYREF
+    char v27[16]; // [rsp+90h] [rbp-98h] BYREF
+    char input[112]; // [rsp+A0h] [rbp-88h] BYREF
+
+    stack_tmp1 = 0i64;
+    stack_tmp2 = 0i64;
+    stack_flag_en = 0i64;
+    for ( i = 423; i >= 0; --i )
+    {
+        new_Node = make_node(flag_check[4 * i]);
+        push(&stack_flag_en, new_Node);
+    }
+    print(aShowYourSkill, argv, envp);
+    scan("%s", input);
+    len_input = -1i64;
+    do
+        ++len_input;
+    while ( input[len_input] );
+    if ( (_DWORD)len_input == 53 )
+    {
+        for ( j = 0; j < 53; ++j )
+        {
+        node = make_node(input[j]);
+        push(&stack_tmp1, node);
+        }
+        create_stack_based(&stack_tmp1, (__int64)&stack_tmp2, 10u, 2u);
+        for ( k = 423; k >= 0; --k )
+        {
+        *(_DWORD *)&map[4 * k] ^= (unsigned __int8)value((__int64)stack_tmp2);
+        pop(&stack_tmp2);
+        }
+        for ( m = 0; m < 424; m += 2 )
+        {
+        v7 = make_node(map[4 * m + 4]);
+        push(&stack_tmp2, v7);
+        v8 = make_node(map[4 * m]);
+        push(&stack_tmp2, v8);
+        }
+        create_stack_based(&stack_tmp2, (__int64)&stack_tmp1, 2u, 8u);
+        v20 = 0;
+        while ( stack_tmp1 )
+        {
+        for ( n = 0; n < 8; ++n )
+        {
+            v27[n] = value((__int64)stack_tmp1);
+            pop(&stack_tmp1);
+        }
+        v11 = value_from_decimal((__int64)v27);
+        v23 = make_node(LOBYTE(xor_value[v20]) ^ v11);
+        push(&stack_tmp2, v23);
+        ++v20;
+        }
+        while ( stack_tmp2 )
+        {
+        v22 = (unsigned __int8)value((__int64)stack_tmp2);
+        if ( v22 != (unsigned __int8)value((__int64)stack_flag_en) )
+        {
+            print(aNope, v12, v13);
+            return 0;
+        }
+        pop(&stack_tmp2);
+        pop(&stack_flag_en);
+        }
+        print(aCorrect, v9, v10);
+    }
+    else
+    {
+        print(aWrongInputLeng, v4, v5);
+    }
+    return 0;
+    }
+    ```
+
+- Trong đó hàm `make_node` có nội dung như sau:
+
+    ```C
+    _BYTE *__fastcall sub_7FF679851810(char a1)
+    {
+    _BYTE *result; // rax
+
+    result = malloc(0x10ui64);
+    result[8] = a1;
+    *(_QWORD *)result = 0i64;
+    return result;
+    }
+    ```
+
+    Ban đầu sẽ cấp phát 16 byte bộ nhớ động, sau đó gán 8 byte đầu tiên của vùng nhớ đó bằng 0 rùi gán byte thứ 9 (vị trí thứ 8) bằng giá trị của tham số a1.Trả về con trỏ đến vùng bộ nhớ này.
+
+- Hàm `push` có nội dung như sau:
+
+    ```C
+    _QWORD *__fastcall push(_QWORD *header_tmp1, _QWORD *node)
+    {
+    _QWORD *result; // rax
+
+    *node = *header_tmp1;
+    result = header_tmp1;
+    *header_tmp1 = node;
+    return result;
+    }
+    ```
+
+    Hàm này thực hiện các bước để đẩy một phần tử vào một stack. 
+
+    Sao chép giá trị của phần tử đầu hiện tại `header_tmp1` vào `node`. Điều này giúp phần tử mới `node` trỏ tới phần tử đầu cũ. Gán `node` vào `header_tmp1`, biến `node` trở thành phần tử đầu tiên trong danh sách hoặc stack. Trả về địa chỉ của phần tử đầu trước khi cập nhật.
+
+- Hàm `create_stack_based` có chức năng như sau:
+
+    ```C
+    _QWORD **__fastcall create_stack_based(_QWORD **header_input, _QWORD *header_output, int a3, int base)
+    {
+    _QWORD **result; // rax
+    unsigned __int8 val; // al
+    unsigned __int8 v6; // al
+    int i; // [rsp+20h] [rbp-28h]
+    char v8[8]; // [rsp+28h] [rbp-20h] BYREF
+
+    if ( a3 == 10 )
+    {
+        while ( 1 )
+        {
+        result = header_input;
+        if ( !*header_input )
+            break;
+        val = value((__int64)*header_input);
+        make_node_8_byte(header_output, val, base);
+        pop(header_input);
+        }
+    }
+    else
+    {
+        while ( 1 )
+        {
+        result = header_input;
+        if ( !*header_input )
+            break;
+        for ( i = 0; i < 8; ++i )
+        {
+            v8[i] = value((__int64)*header_input);
+            pop(header_input);
+        }
+        v6 = value_from_octan((__int64)v8, a3);
+        make_node_8_byte(header_output, v6, base);
+        }
+    }
+    return result;
+    }
+    ```
+
+    Hàm này với sẽ có 2 chức năng chính tùy thuộc vào những gì chúng ta truyền vào trong hàm.
+
+    Nếu `a3` `=` `10` thì hàm sẽ thực hiện đẩy từng phần tử của `stack` ra rùi lưu đẩy 8 byte cuả số đóa tùy theo base chúng ta truyền vào. Ví dụ val = 123 và base = 2, 123(10) = 01111011(2) thì sẽ thực hiện đẩy vào `stack_out` theo thứ tự là `1` -> `1` -> `0` -> `1` -> `1` -> `1` -> `1` -> `0`. Cứ thực hiện như thé đén khi hết giá trị của stack_in thì thui.
+
+    Nếu `a3` `!=` `10` thì hàm sẽ thực hiện lấy 8 byte mỗi mỗi lần, rùi thực hiện lấy từ 8 byte đó chuyển sang giá trị mà tương ứng với các hệ cơ số `a3`, rùi thực hiện đẩy 8 byte của số đã tính được tùy theo `base` cho trước. Ví  dụ 8 byte đọc được từ `stack_in` là `0, 1, 1, 1, 0, 1, 0, 0`, `a3` = `2`, `base` = `8`. Ban đầu sẽ chuyển 0111010 (cơ số `a3` = 2) sang thập phân bằng `116`. `Base` = 8 nên chuyển 116(10) = 164(8) nên đẩy 8 byte là `0, 0, 0, 0, 0, 1, 6, 4` theo tứ tự lần lượt là `4` -> `6` -> `1` -> `0` -> `0` -> `0` -> `0` -> `0`.
+
+- Sơ lược qua chương trình, ban đầu chương trình sẽ đẩy các byte của `flag_check` vô `stack_flag_en`. Thực hiện đọc input, kiểm tra xem chuỗi đầu vào có đúng chiều dài là `53` hay không, nếu đúng thì thực hiện đẩy từng kí tự đó vô `stack_input`. Sau đó sẽ tạo ra một `stack_input_binary` để lưu lại từng kí tự của input dưới dạng số nhị phân (8 byte một). Tiếp đến là xor từng giá trị của map với những giá trị nhị phân lưu được trong `stack_input_binary` theo đúng như quy luật sau:
+
+    ```C
+    for ( k = 423; k >= 0; --k )
+    {
+      *(_DWORD *)&map[4 * k] ^= (unsigned __int8)value((__int64)stack_input_binary);
+      pop(&stack_tmp2);
+    }
+    ```
+
+    Tiếp đến sau khi xor xong map thì sẽ thực hiện đẩy một số giá trị trong mảng map vô `stack_bit_from_map` theo đúng quy luật sau:
+
+    ```C
+    for ( m = 0; m < 424; m += 2 )
+    {
+      v7 = make_node(map[4 * m + 4]);
+      push(&stack_tmp2, v7);
+      v8 = make_node(map[4 * m]);
+      push(&stack_tmp2, v8);
+    }
+    ```
+
+    Xong rùi thực hiện `pop` để lấy 8 byte của `stack_bit_from_map` ra, chuyển nó thành số thập phân rùi lại thực hiện đẩy vô `stack_octan` 8 byte của số đó dưới dạng số `octan`. Sau đó lại thực hiện pop 8 byte của `stack_octan` rùi thực hiện đưa đưa 8 byte đó thành số thập phân được tạo từ 8 byte đó (ví dụ 8 byte là `0, 0, 0, 0, 1, 2, 3, 4` thì sẽ đưua thành số `1234`) rùi xor với các giá trị trong một mảng, cuối cùng là so sánh giá trị xor được với `stack_flag_en`.
+
+- Build lại chương trình bằng python (tùy theo input là gig và tự đặt nhá):
+
+    ```python
+    flag = [
+        0x74, 0x75, 0x6E, 0x67, 0x64, 0x76, 0x61, 0x6E, 0x64, 0x65, 
+        0x70, 0x74, 0x72, 0x61, 0x63, 0x6F, 0x6D, 0x6F, 0x74, 0x6B, 
+        0x68, 0x6F, 0x6E, 0x67, 0x63, 0x6F, 0x68, 0x61, 0x69, 0x74, 
+        0x68, 0x69, 0x63, 0x68, 0x62, 0x68, 0x62, 0x72, 0x61, 0x74, 
+        0x6E, 0x68, 0x69, 0x75, 0x65, 0x64, 0x65, 0x6E, 0x6E, 0x6F, 
+        0x69, 0x6C, 0x68
+    ]
+
+    map = [
+        0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0,
+        0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+        1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+        0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+        0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+        1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+        0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+        0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+        1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+        0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+        0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+        1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+        0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0,
+        0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0,
+        0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0,
+        0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+        1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+        0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+        1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+        0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0,
+        0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+        0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+        0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+        1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+        0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+        0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+        1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+        1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+        1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0,
+        0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+        1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0
+    ]
+
+    xor_xor = [
+        0x0c2, 0x03d, 0x029, 0x0cf, 0x134, 0x0de, 0x138, 0x110, 0x0cc, 0x075,
+        0x13d, 0x154, 0x0f2, 0x047, 0x11b, 0x0b5, 0x087, 0x118, 0x0b6, 0x0a7,
+        0x104, 0x001, 0x104, 0x134, 0x004, 0x128, 0x159, 0x0f0, 0x018, 0x0f7,
+        0x019, 0x043, 0x10d, 0x000, 0x0e1, 0x08c, 0x0ad, 0x162, 0x153, 0x0eb,
+        0x0e5, 0x0da, 0x0a0, 0x0d8, 0x04c, 0x068, 0x05c, 0x0a0, 0x034, 0x0c8,
+        0x03e, 0x066, 0x150
+    ]
+
+    fla_en = [
+        0x24, 0x24, 0x24, 0x24, 0x24, 0x24, 0x24, 0x24, 0x24, 0x24,
+        0x24, 0x24, 0x7d, 0x67, 0x61, 0x6c, 0x66, 0x20, 0x65, 0x6b,
+        0x61, 0x66, 0x20, 0x61, 0x20, 0x74, 0x6f, 0x6e, 0x20, 0x74,
+        0x73, 0x75, 0x6a, 0x20, 0x65, 0x72, 0x65, 0x68, 0x20, 0x67,
+        0x6e, 0x69, 0x68, 0x74, 0x20, 0x74, 0x6f, 0x6e, 0x7b, 0x43,
+        0x53, 0x43, 0x4b
+    ]   # 
+
+    ans = []
+
+    def int_to_8bit_list(number):
+        binary_str = format(number, '08b')
+        bit_list = [int(bit) for bit in binary_str]
+        return bit_list
+
+    def int_to_8byte_octal_list(number):
+        octal_str = format(number, '08o')
+        octal_list = [int(digit) for digit in octal_str]
+        return octal_list
+    for i in flag:
+        ans += int_to_8bit_list(i)
+    pos = -1
+    for i in range(423, -1, -1):
+        pos += 1
+        map[4 * i] ^= ans[pos]
+    ans.clear()
+    _map_xor_4_bit = []
+    for i in range(0, 424, 2):
+        _map_xor_4_bit.append(map[4 * i + 4])
+        _map_xor_4_bit.append(map[4 * i])
+    _map_xor_4_bit = _map_xor_4_bit[::-1]
+    tmp = []
+    for i in range(0, len(_map_xor_4_bit), 8):
+        tmp.append(_map_xor_4_bit[i] * 128 + _map_xor_4_bit[i + 1] * 64 + _map_xor_4_bit[i + 2] * 32 + _map_xor_4_bit[i + 3] * 16 + _map_xor_4_bit[i + 4] * 8 + _map_xor_4_bit[i + 5] * 4 + _map_xor_4_bit[i + 6] * 2 + _map_xor_4_bit[i + 7] * 1)
+    tmp = tmp[::-1]
+    for i in range(len(tmp)):
+        ans += int_to_8byte_octal_list(tmp[i])
+    print(ans)
+    tmp.clear()
+    for i in range(0, len(ans), 8):
+        tmp.append((ans[i] * 10000000 + ans[i + 1] * 1000000 + ans[i + 2] * 100000 + ans[i + 3] * 10000 + ans[i + 4] * 1000 + ans[i + 5] * 100 + ans[i + 6] * 10 + ans[i + 7]))
+    for i in range(len(tmp)):
+        tmp[i] = (tmp[i] ^ xor_xor[i]) & 0xff
+    tmp = tmp[::-1]
+    for i in tmp: print(hex(i))
+    ```
+
+
+- Source code làm ngược lại quá trình:
+
+    ```python
+    flag_en = [
+        0x24, 0x24, 0x24, 0x24, 0x24, 0x24, 0x24, 0x24, 0x24, 0x24,
+        0x24, 0x24, 0x7d, 0x67, 0x61, 0x6c, 0x66, 0x20, 0x65, 0x6b,
+        0x61, 0x66, 0x20, 0x61, 0x20, 0x74, 0x6f, 0x6e, 0x20, 0x74,
+        0x73, 0x75, 0x6a, 0x20, 0x65, 0x72, 0x65, 0x68, 0x20, 0x67,
+        0x6e, 0x69, 0x68, 0x74, 0x20, 0x74, 0x6f, 0x6e, 0x7b, 0x43,
+        0x53, 0x43, 0x4b
+    ]
+
+    xor_xor = [
+        0x0c2, 0x03d, 0x029, 0x0cf, 0x134, 0x0de, 0x138, 0x110, 0x0cc, 0x075,
+        0x13d, 0x154, 0x0f2, 0x047, 0x11b, 0x0b5, 0x087, 0x118, 0x0b6, 0x0a7,
+        0x104, 0x001, 0x104, 0x134, 0x004, 0x128, 0x159, 0x0f0, 0x018, 0x0f7,
+        0x019, 0x043, 0x10d, 0x000, 0x0e1, 0x08c, 0x0ad, 0x162, 0x153, 0x0eb,
+        0x0e5, 0x0da, 0x0a0, 0x0d8, 0x04c, 0x068, 0x05c, 0x0a0, 0x034, 0x0c8,
+        0x03e, 0x066, 0x150
+    ]
+
+    map_ = [
+        0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0,
+        0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+        1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+        0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+        0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+        1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+        0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+        0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+        1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+        0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+        0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+        1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+        0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0,
+        0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0,
+        0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0,
+        0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+        1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+        0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+        1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+        0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0,
+        0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+        0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+        0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+        1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+        0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+        0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+        1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+        1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+        1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0,
+        0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+        1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0
+    ]
+
+    def number_to_8digit_list(number):
+        number_str = f"{number:08d}"
+        digit_list = [int(digit) for digit in number_str]
+        return digit_list
+
+    def list_to_octal(digit_list):
+        octal_str = ''.join(map(str, digit_list))
+        decimal_number = int(octal_str, 8)
+        return decimal_number
+
+    def number_to_8bit_list(number):
+        binary_str = f"{number:08b}"
+        bit_list = [int(bit) for bit in binary_str]
+        return bit_list
+
+    def bit_list_to_decimal(bit_list):
+        binary_str = ''.join(map(str, bit_list))
+        decimal_number = int(binary_str, 2)
+        return decimal_number
+
+    if __name__ == "__main__":
+        flag_en = flag_en[::-1] 
+        for i in range(len(flag_en)): flag_en[i] ^= xor_xor[i]
+        # for i in flag_en: print(hex(i))
+        ans = []
+        for i in flag_en: ans += number_to_8digit_list(i)
+        tmp = []
+        for i in range(0, len(ans), 8):
+            k = ans[i : i + 8 : 1]
+            tmp.append(list_to_octal(k))
+        tmp = tmp[::-1]
+        ans.clear()
+        for i in tmp:
+            ans += number_to_8bit_list(i)
+        ans = ans[::-1]
+        for i in range(0, len(ans), 2):
+            ans[i], ans[i + 1] = ans[i + 1], ans[i]
+        flag = []
+        for i in range(424):
+            map_[4 * i] ^= ans[i]
+        flag.clear()
+        for i in range(423, -1, -1):
+            flag.append(map_[4 * i])
+        tmp.clear()
+        for i in range(0, len(flag), 8):
+            tmp = flag[i : i + 8 : 1]
+            print(end = chr(bit_list_to_decimal(tmp)))
+        # KCSC{3V3rY_r3v3R53_En91n33r_kN0w_H0W_TH3_5t4ck_w0Rkk}
+    ```
+
+- Flag:
+
+    ```txt
+    KCSC{3V3rY_r3v3R53_En91n33r_kN0w_H0W_TH3_5t4ck_w0Rkk}
+    ```
 
 # 8_RIEL_WARMUP_DONE (warmup)
 
@@ -502,7 +980,7 @@
 
     Như vậy thông qua hàm này là chúng ta biết được flag sẽ có chiều dài là `57` (dựa vào số phần tử của mảng `isDigit[]` và những vị trí được là chữ số hay không và có thể tìm luôn được những giá trị của kí tự đóa ở vị trí là chữ số).
 
-    Bài sẽ lấy ra kí tự thứ `pos[i]` của flag rùi thực hiện lấy kí tự đó trừ đi 0x30, việc này làm lấy giá trị của kí tự đó 
+    Bài sẽ lấy ra kí tự thứ `pos[i]` của flag rùi thực hiện lấy kí tự đó trừ đi 0x30, việc này làm lấy giá trị số của của kí tự đó (tương tự như '9' - '0' chả hạn). 
 
     Để tìm được các giá trị đóa thì chúng ta 1 là nhìn nhanh (tui thấy tự nhẩm được giá trị), 2 là quăng vào `z3`. Sau khi nhẩm qua thì ta thấy có những giá trị như sau:
 
