@@ -389,15 +389,832 @@
     ```
 
 
-<!-- 
+
 # 5_LIES (Hard)
 
 - Chall: [FILE](0_CHALL/5_LIES.rar).
 
+- Đây là một bài ở mức độ khó, với bản thân mình sau khi làm bài này xong mình thấy bài này khá là bựa, ý đồ của tác giả ra thì ác z ò. Thoai chúng ta bắt đầu lun.
+
+- Chúng ta đến với hàm main của chương trình:
+
+    ```C
+    int __cdecl main(int argc, const char **argv, const char **envp)
+    {
+    char v4; // [esp+0h] [ebp-10h]
+    unsigned int len; // [esp+0h] [ebp-10h]
+    unsigned __int8 i; // [esp+Fh] [ebp-1h]
+
+    print("Enter Your Flag: ", v4);
+    scan("%s", (char)flag);
+    len = strlen(flag);
+    if ( len != 32 )
+    {
+        print("Wrong Length!!!\n", len);
+        exit(0);
+    }
+    supper_xor(flag);
+    RC4(flag);
+    AES(flag);
+    for ( i = 0; i < 0x20u; ++i )
+    {
+        if ( flag[i] != flag_checker[i] )
+        {
+        print("Wrong Flag!!!\n", 32);
+        exit(0);
+        }
+    }
+    print("Correct :3\n", 32);
+    return 0;
+    }
+    ```
+
+- Như vậy bài này sẽ yêu cầu nhập `flag`, xong rùi thực hiện biến đổi thông qua 3 hàm là `supper_xor`, `RC4` và `AES`. Xong rùi thực hiện check với flag_checker để in ra `Correct` hay `Wrongs`. Oce có vẻ như ý tưởng của bài này chỉ là để chúng ta phân tích 3 cái hàm kia thoai.
+
+- Hàm `supper_xor`:
+
+    Với hàm này khá là dễ để chúng ta có thể build lại nên tui sẽ viết lại bằng python ở đây có gì thuận tiện cho việc brute force sau này:
+
+    ```python
+    def supper_xor(flag):
+        for i in range(0x20):
+            flag[i] ^= 0xAB
+        for i in range(0x20):
+            flag[i] ^= (i + 0xAB) & 0xFF
+        for i in range(0, 0x20, 4):
+            flag[i] ^= 0xEF
+            flag[i + 1] ^= 0xBE
+            flag[i + 2] ^= 0xFE
+            flag[i + 3] ^= 0xC0
+        for i in range(0, 0x20, 4):
+            flag[i] ^= 0xBE
+            flag[i + 1] ^= 0xBA
+            flag[i + 2] ^= 0xAD
+            flag[i + 3] ^= 0xDE
+        for i in range(0x20):
+            flag[i] ^= 0xCD
+        for i in range(0x20):
+            flag[i] ^= (i + 0xCD) & 0xFF
+        for i in range(0, 0x20, 4):
+            flag[i] ^= 0xBE
+            flag[i + 1] ^= 0xBA
+            flag[i + 2] ^= 0xFE
+            flag[i + 3] ^= 0xC0
+        for i in range(0, 0x20, 4):
+            flag[i] ^= 0xEF
+            flag[i + 1] ^= 0xBE    
+            flag[i + 2] ^= 0xAD
+            flag[i + 3] ^= 0xDE
+        for i in range(0x20):
+            flag[i] ^= 0xEF
+        for i in range(0x20):
+            flag[i] ^= (i + 0xEF) & 0xFF
+    ```
+
+- Hàm `RC4`: nhìn **lướt qua** cũng thấy build lại hàm này dễ.
+
+    ![alt text](IMG/5/image-1.png)
+
+    Có một điều chú ý là trong hàm ở `map` có nó được gọi trong 1 phần `TLSCallback`, chú ý vì nguy cơ rất cao ở đây có `anti debug`.
+
+    ![alt text](IMG/5/image-2.png) 
+
+    Nhảy vô thì thấy như sau:
+
+    ```C
+    NTSTATUS __stdcall TlsCallback_0(int a1, int a2, int a3)
+    {
+    NTSTATUS result; // eax
+    ULONG NtGlobalFlag; // [esp+8h] [ebp-Ch]
+    int ProcessInformation; // [esp+Ch] [ebp-8h] BYREF
+
+    NtGlobalFlag = NtCurrentPeb()->NtGlobalFlag;
+    ProcessInformation = 0;
+    result = NtQueryInformationProcess((HANDLE)0xFFFFFFFF, ProcessDebugPort, &ProcessInformation, 4u, 0);
+    if ( !result && ProcessInformation )
+    {
+        result = NtGlobalFlag & 0x70;
+        if ( (NtGlobalFlag & 0x70) != 0 )
+        qmemcpy(map, &unk_8A40A8, sizeof(map));
+    }
+    return result;
+    }
+    ```
+
+    `NtGlobalFlag = NtCurrentPeb()->NtGlobalFlag;` (lấy cờ toàn cục): Hàm này truy xuất **PEB** hiện tại và lấy giá trị của **NtGlobalFlag**.
+
+    `result = NtQueryInformationProcess((HANDLE)0xFFFFFFFF, ProcessDebugPort, &ProcessInformation, 4u, 0);` (Kiểm tra thông tin quy trình): Cuộc gọi hàm **NtQueryInformationProcess** kiểm tra thông tin của quy trình. Ở đây, nó đang kiểm tra cổng debug (**debug port**) của quy trình hiện tại. **0xFFFFFFFF** thường ám chỉ đến quy trình hiện tại. 
+    
+    Oce tới đây là đã thấy có dấu hiện `anti_debug` roài, nhìn ở dưới thì nó thực hiện kiểm tra nếu là đang debug thì nó sẽ sao chép vùng bộ nhớ `unk_8A40A8` sang `map`. Chúng ta có thể setIP để nó nhảy qua hoặc thực hiện thay đổi giá trị thanh `ecx` thành `0` trong khi nó được nhảy đến đây.
+
+    ![alt text](IMG/5/image-3.png)
+
+    Như vậy sau khi check xong phần anti_debug này thì chúng ta dễ dàng lấy được những giá trị cần lấy, chúng ta dễ dàng viết lại được hàm đó nhưu sau:
+
+    ```python
+    map = [
+        0x89, 0xCD, 0x32, 0x41, 0x9A, 0x7C, 0xE5, 0x51, 0xF1, 0xC2, 
+        0xA1, 0x76, 0x96, 0x59, 0x5F, 0x7A, 0x4F, 0x47, 0x88, 0x70, 
+        0x4C, 0x63, 0x28, 0xA4, 0x21, 0x90, 0xEA, 0x00, 0x09, 0xB0, 
+        0x8F, 0x16, 0x3A, 0x8D, 0x3E, 0x9F, 0x8B, 0xE6, 0x74, 0x33, 
+        0x40, 0xA2, 0xA8, 0x39, 0x2A, 0x36, 0xC7, 0x5B, 0xF0, 0xB4, 
+        0xD7, 0x87, 0xDE, 0xF7, 0x4A, 0x8A, 0x77, 0x30, 0x75, 0xAF, 
+        0x94, 0x5A, 0xDF, 0x67, 0x48, 0xDD, 0x52, 0x93, 0xA3, 0x2F, 
+        0xFE, 0xA6, 0x03, 0xD9, 0x4B, 0xC5, 0x5D, 0x62, 0x17, 0x66, 
+        0xC6, 0x1E, 0xE4, 0xCA, 0x46, 0x19, 0xD6, 0x92, 0x78, 0xEC, 
+        0xB5, 0x4D, 0xF4, 0xF2, 0x7B, 0x27, 0x8C, 0x31, 0xA9, 0x3B, 
+        0x12, 0xAA, 0x73, 0x9D, 0x05, 0xE9, 0xB6, 0xAB, 0x0B, 0x08, 
+        0x97, 0x7E, 0xBA, 0x9E, 0x20, 0x25, 0x71, 0x38, 0x80, 0x0E, 
+        0x64, 0xEB, 0xE2, 0xCC, 0xFA, 0xCE, 0xAD, 0x44, 0x61, 0xF6, 
+        0xFF, 0x69, 0xD0, 0x13, 0x99, 0xFD, 0xDA, 0x6B, 0x3C, 0x22, 
+        0x56, 0x6E, 0xB2, 0x45, 0x26, 0x7F, 0xF8, 0x0C, 0xBC, 0x1B, 
+        0x6D, 0xC4, 0x42, 0xD8, 0x84, 0x72, 0xB3, 0x8E, 0x43, 0x1D, 
+        0xB9, 0x5C, 0xBE, 0x5E, 0x53, 0x83, 0xCB, 0x85, 0x95, 0x9B, 
+        0xAE, 0xE8, 0x15, 0xB7, 0xD5, 0xE3, 0xBF, 0xCF, 0x6C, 0xD3, 
+        0xC3, 0xC1, 0x14, 0x0D, 0x01, 0xE1, 0xC9, 0x3F, 0xEF, 0x18, 
+        0x68, 0xA7, 0xE0, 0xC8, 0x2C, 0x86, 0x1F, 0xF5, 0xFB, 0x6A, 
+        0xDB, 0x54, 0xD4, 0xBB, 0xD2, 0x49, 0x37, 0x23, 0xD1, 0xEE, 
+        0x2D, 0xAC, 0x60, 0x4E, 0xE7, 0x79, 0x1C, 0xB1, 0x98, 0x0F, 
+        0x6F, 0x02, 0x7D, 0x0A, 0xED, 0xA5, 0xA0, 0x06, 0x55, 0x24, 
+        0x58, 0xC0, 0xBD, 0x91, 0x2B, 0xF3, 0x2E, 0x9C, 0x07, 0xDC, 
+        0xF9, 0x29, 0x35, 0x04, 0x81, 0x57, 0x82, 0xB8, 0x50, 0x3D, 
+        0x65, 0x11, 0x34, 0xFC, 0x10, 0x1A
+    ]
+
+    def RC4(flag):
+        tmp1, tmp2 = 0, 0
+        for i in range(0x20):
+            tmp2 += 1
+            tmp1 = (tmp1 + map[tmp2]) & 0xff
+            map[tmp1], map[tmp2] = map[tmp2], map[tmp1]
+            input[i] ^= map[(map[tmp1] + map[tmp2]) & 0xff]
+    ```
+
+- Hàm `AES`, nhưng mà phần này sẽ không phải là mã hóa toàn bộ các công đoạn của `AES` mà chỉ là một **phần nhỏ** trong quá trình mã hóa `AES` thui, cụ thể như sau:
+
+    ```C
+    unsigned __int8 __usercall AES@<al>(int a1@<ebp>, __m128 *input)
+    {
+    unsigned __int8 result; // al
+    unsigned __int8 i; // [esp-21h] [ebp-2Dh]
+    __m128 v4[2]; // [esp-20h] [ebp-2Ch] BYREF
+    int v5; // [esp+0h] [ebp-Ch]
+    int v6; // [esp+4h] [ebp-8h]
+    int retaddr; // [esp+Ch] [ebp+0h]
+
+    v5 = a1;
+    v6 = retaddr;
+    v4[0] = (__m128)xmmword_8A3180;               // KCSC
+    AES_little(input, v4);
+    result = (unsigned __int8)AES_little(input + 1, v4);
+    for ( i = 0; i < 0x20u; ++i )
+    {
+        input->m128_i8[i] ^= AES_xor[i];
+        result = i + 1;
+    }
+    return result;
+    }
+    ```
+
+    ```C
+    __m128 *__cdecl AES_little(__m128 *a1, __m128 *a2)
+    {
+    __m128 *result; // eax
+    __m128 v6; // [esp-20h] [ebp-2Ch]
+
+    v6 = _mm_xor_ps(*a1, *a2);
+    _EDX = a2;
+    __asm { aesenc  xmm0, xmmword ptr [edx] }
+    result = a2;
+    __asm { aesenclast xmm0, xmmword ptr [eax] }
+    *a1 = _XMM0;
+    return result;
+    }
+    ```
+
+    Ban đầu sẽ thực hiện hiện lấy lần lượt từng 16 byte của flag rùi thực hiện truyền vô hàm `AES_little` với tham số cố định là `v4`.
+
+    ```python
+    v4 = [
+        0x43, 0x00, 0x00, 0x00, 0x53, 0x00, 0x00, 0x00, 0x43, 0x00, 
+        0x00, 0x00, 0x4B, 0x00, 0x00, 0x00
+    ]
+    ```
+
+    Bây giờ chúng ta thực hiện xem hàm AES_little có những cái gì.
+
+    ```C
+    v6 = _mm_xor_ps(*a1, *a2);
+    ```
+
+    Phép toán này sử dụng lệnh `_mm_xor_ps` để thực hiện phép `XOR` trên các phần tử của hai vector `a1` và `a2`.
+    
+    Kết quả của phép `XOR` được lưu vào biến tạm thời `v6`.
+
+    ```C
+    __asm { aesenc  xmm0, xmmword ptr [edx] }
+    ```
+
+    Dòng lệnh này sử dụng lệnh lắp ráp `aesenc`, đây là một lệnh mã hóa `AES` cho **một vòng mã hóa** (vói tham số truyền vào là data và key).
+
+    `xmm0`: chứa giá trị của phép xor `a1` và `a2`.
+
+    [edx]: chứa giá trị của v4 (KCSC).
+
+    Sau khi gọi thì `xmm0` sẽ thay đổi, các bạn có thể theo dõi thông qua các địa chi khi debug.
+
+    ![alt text](IMG/5/image-4.png)
+
+    Tương tự như thế, kết quả tại lệnh `aesenc` lại được tiếp tục làm tham số truyền vào của lệnh `aesenclast` với `key` vẫn là `v4`.
+
+    Sau khi biến đổi thông qua lệnh `aesenc` và `aesenclast` thì lấy tiếp tục 16 byte sau của input và thực hiện lại quá trình như trên. Sau đó xor các với các giá trị trong mảng `AES_xor`.
+
+    Có vẻ như là đến phần này cần chúng ta phải ngồi tra cứu tìm cách hoạt động của 2 lệnh aesenc và aesenclast, không là thôi khỏi tính đến TH sau. Đến đây trong lúc thi là mình bế tắc lun bởi vì tìm decode của nó thui đã rất là khó rùi, nhưng mà khó chứ không phải không có, sau một hồi tham khảo thì mình cũng đã tìm được 1 nguồn xây dựng lại 2 hàm đó cũng uy tín. Các bạn có thể tham khảo nó tại [đây](https://github.com/noobmannn/CTF_WriteUp/blob/main/AES_NI.md) (chú ý dữ liệu nhập vào và in ra sẽ bị ngược).
+
+- Sau khi nắm sơ lược được quá trình của các hàm trong chall thì thực hiện viết lại chỉ là thủ tục, mình bắt tay vào viết sc lun:
+
+    ```python
+    from copy import deepcopy as copy
+
+    sboxInv = [
+        0x52, 0x09, 0x6a, 0xd5, 0x30, 0x36, 0xa5, 0x38, 0xbf, 0x40, 0xa3, 0x9e, 0x81, 0xf3, 0xd7, 0xfb,
+        0x7c, 0xe3, 0x39, 0x82, 0x9b, 0x2f, 0xff, 0x87, 0x34, 0x8e, 0x43, 0x44, 0xc4, 0xde, 0xe9, 0xcb,
+        0x54, 0x7b, 0x94, 0x32, 0xa6, 0xc2, 0x23, 0x3d, 0xee, 0x4c, 0x95, 0x0b, 0x42, 0xfa, 0xc3, 0x4e,
+        0x08, 0x2e, 0xa1, 0x66, 0x28, 0xd9, 0x24, 0xb2, 0x76, 0x5b, 0xa2, 0x49, 0x6d, 0x8b, 0xd1, 0x25,
+        0x72, 0xf8, 0xf6, 0x64, 0x86, 0x68, 0x98, 0x16, 0xd4, 0xa4, 0x5c, 0xcc, 0x5d, 0x65, 0xb6, 0x92,
+        0x6c, 0x70, 0x48, 0x50, 0xfd, 0xed, 0xb9, 0xda, 0x5e, 0x15, 0x46, 0x57, 0xa7, 0x8d, 0x9d, 0x84,
+        0x90, 0xd8, 0xab, 0x00, 0x8c, 0xbc, 0xd3, 0x0a, 0xf7, 0xe4, 0x58, 0x05, 0xb8, 0xb3, 0x45, 0x06,
+        0xd0, 0x2c, 0x1e, 0x8f, 0xca, 0x3f, 0x0f, 0x02, 0xc1, 0xaf, 0xbd, 0x03, 0x01, 0x13, 0x8a, 0x6b,
+        0x3a, 0x91, 0x11, 0x41, 0x4f, 0x67, 0xdc, 0xea, 0x97, 0xf2, 0xcf, 0xce, 0xf0, 0xb4, 0xe6, 0x73,
+        0x96, 0xac, 0x74, 0x22, 0xe7, 0xad, 0x35, 0x85, 0xe2, 0xf9, 0x37, 0xe8, 0x1c, 0x75, 0xdf, 0x6e,
+        0x47, 0xf1, 0x1a, 0x71, 0x1d, 0x29, 0xc5, 0x89, 0x6f, 0xb7, 0x62, 0x0e, 0xaa, 0x18, 0xbe, 0x1b,
+        0xfc, 0x56, 0x3e, 0x4b, 0xc6, 0xd2, 0x79, 0x20, 0x9a, 0xdb, 0xc0, 0xfe, 0x78, 0xcd, 0x5a, 0xf4,
+        0x1f, 0xdd, 0xa8, 0x33, 0x88, 0x07, 0xc7, 0x31, 0xb1, 0x12, 0x10, 0x59, 0x27, 0x80, 0xec, 0x5f,
+        0x60, 0x51, 0x7f, 0xa9, 0x19, 0xb5, 0x4a, 0x0d, 0x2d, 0xe5, 0x7a, 0x9f, 0x93, 0xc9, 0x9c, 0xef,
+        0xa0, 0xe0, 0x3b, 0x4d, 0xae, 0x2a, 0xf5, 0xb0, 0xc8, 0xeb, 0xbb, 0x3c, 0x83, 0x53, 0x99, 0x61,
+        0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d
+    ]
+
+    def transpose4x4(m):
+        return m[0::4] + m[1::4] + m[2::4] + m[3::4]
+
+    def list2hex(list):
+        list = list[::-1]
+        hex = ""
+        for e in list:
+            hex += "{:02X}".format(e)
+        return hex
+
+    def hex2list(hex):
+        byte_list = [hex[i:i+2] for i in range(0, len(hex), 2)][::-1]
+        hex = ''.join(byte_list)
+        lst = []
+        if len(hex) % 2 == 0:
+            for i in range(len(hex)//2):
+                lst.append(int(hex[i*2:i*2+2], 16))
+        return lst
+
+    def xor(bytelist1, bytelist2):
+        res = []
+        length = min(len(bytelist1), len(bytelist2))
+        for i in range(length):
+            res.append(bytelist1[i] ^ bytelist2[i])
+        return res
+
+    def aesdec_cal(state, roundkey, last=False):
+        def rotate(word, n):
+            return word[n:]+word[0:n]
+
+        def shift_rows_inv(state):
+            for i in range(4):
+                state[i*4:i*4+4] = rotate(state[i*4:i*4+4],-i)
+
+        def sub_bytes_inv(state):
+            for i in range(16):
+                state[i] = sboxInv[state[i]]
+
+        def galoisMult(a, b):
+            p = 0
+            hiBitSet = 0
+            for i in range(8):
+                if b & 1 == 1:
+                    p ^= a
+                hiBitSet = a & 0x80
+                a <<= 1
+                if hiBitSet == 0x80:
+                    a ^= 0x1b
+                b >>= 1
+            return p % 256
+
+        def mixColumnInv(column):
+            temp = copy(column)
+            column[0] = galoisMult(temp[0],14) ^ galoisMult(temp[3],9) ^ \
+                        galoisMult(temp[2],13) ^ galoisMult(temp[1],11)
+            column[1] = galoisMult(temp[1],14) ^ galoisMult(temp[0],9) ^ \
+                        galoisMult(temp[3],13) ^ galoisMult(temp[2],11)
+            column[2] = galoisMult(temp[2],14) ^ galoisMult(temp[1],9) ^ \
+                        galoisMult(temp[0],13) ^ galoisMult(temp[3],11)
+            column[3] = galoisMult(temp[3],14) ^ galoisMult(temp[2],9) ^ \
+                        galoisMult(temp[1],13) ^ galoisMult(temp[0],11)
+            return column
+        
+
+        def mix_columns_inv(data):
+            new = bytearray(16)
+            for i in range(4):
+                column = [data[i], data[i+4], data[i+8], data[i+12]]
+                column = mixColumnInv(column)
+                data[i], data[i+4], data[i+8], data[i+12] = column[0], column[1], column[2], column[3]
+                # new[i*4: i*4+4] = column[0], column[1], column[2], column[3]
+            return data
+
+        state = xor(state, roundkey)
+        if not last:
+            state = mix_columns_inv(state)
+        shift_rows_inv(state)
+        sub_bytes_inv(state)
+        return state
+
+    def aesdec(dat, k):
+        data = transpose4x4(hex2list(dat.hex()))
+        key = transpose4x4(hex2list(k.hex()))    
+        res = transpose4x4(aesdec_cal(data, key))
+        return bytes.fromhex(list2hex(res))
+
+    def aesdeclast(dat, k):
+        data = transpose4x4(hex2list(dat.hex()))
+        key = transpose4x4(hex2list(k.hex()))    
+        res = transpose4x4(aesdec_cal(data, key, last=True))
+        return bytes.fromhex(list2hex(res))
+
+    ############################################################
+
+    flag_en = [
+        0x9c, 0x87, 0x9c, 0x6e, 0x64, 0x27, 0x3b, 0x78, 0x71, 0x53,
+        0x2b, 0x6d, 0xd4, 0x0e, 0x82, 0x22, 0x5d, 0xc4, 0xe2, 0xe8,
+        0x07, 0xb9, 0x85, 0xa7, 0x49, 0x9a, 0x6d, 0xd4, 0xfc, 0x64,
+        0xba, 0x02
+    ]
+
+    KCSC = [
+        0x43, 0x00, 0x00, 0x00, 0x53, 0x00, 0x00, 0x00, 0x43, 0x00, 
+        0x00, 0x00, 0x4B, 0x00, 0x00, 0x00
+    ]
+
+    ASE_xor = [
+        0x1D, 0x97, 0x2B, 0x75, 0x6B, 0x11, 0xA2, 0xA5, 0xEC, 0x95, 
+        0x5C, 0x49, 0xE6, 0x04, 0x33, 0x92, 0xEC, 0x44, 0xA1, 0x2A, 
+        0xEC, 0x61, 0x46, 0x88, 0xC8, 0x49, 0xE8, 0x6D, 0x75, 0xD7, 
+        0xF7, 0x20
+    ]
+    map = [
+        0x89, 0x49, 0x1a, 0x48, 0x98, 0xd6, 0xaf, 0x56, 0xce, 0x67,
+        0xed, 0x16, 0x2e, 0x2f, 0x53, 0x8f, 0x08, 0xc3, 0x94, 0x15,
+        0x50, 0x4d, 0x69, 0x33, 0x03, 0x1c, 0x2c, 0xea, 0xbb, 0xcc,
+        0x57, 0x7c, 0x59, 0x8d, 0x3e, 0x9f, 0x8b, 0xe6, 0x74, 0xa4,
+        0x40, 0xa2, 0xa8, 0x39, 0x2a, 0x36, 0xc7, 0x5b, 0xf0, 0xb4,
+        0xd7, 0x87, 0xde, 0xf7, 0x4a, 0x8a, 0x77, 0x30, 0x75, 0xe5,
+        0x88, 0x5a, 0xdf, 0xc2, 0x41, 0xdd, 0x52, 0x93, 0xa3, 0x3a,
+        0xfe, 0xa6, 0x21, 0xd9, 0x4b, 0xc5, 0x5d, 0x62, 0x17, 0x66,
+        0xc6, 0x1e, 0xe4, 0xca, 0x46, 0x19, 0x76, 0x92, 0x78, 0xec,
+        0xb5, 0x63, 0xf4, 0xf2, 0x7b, 0x27, 0x8c, 0x31, 0xa9, 0x3b,
+        0x12, 0xaa, 0x73, 0x9d, 0x05, 0xe9, 0xb6, 0xab, 0x0b, 0x4f,
+        0x97, 0x7e, 0xba, 0x9e, 0x20, 0x25, 0x71, 0x38, 0x80, 0x0e,
+        0x64, 0xeb, 0xe2, 0xb0, 0xfa, 0xf1, 0xad, 0x44, 0x61, 0xf6,
+        0xff, 0x28, 0xd0, 0x13, 0x99, 0xfd, 0xda, 0x6b, 0x3c, 0x22,
+        0x51, 0x6e, 0xb2, 0x45, 0x26, 0x7f, 0xf8, 0x0c, 0xbc, 0x1b,
+        0x6d, 0xc4, 0x42, 0xd8, 0x84, 0x72, 0xb3, 0x8e, 0x43, 0x1d,
+        0xb9, 0x5c, 0xbe, 0x5e, 0x5f, 0x83, 0xcb, 0x85, 0x95, 0x9b,
+        0xae, 0xe8, 0x70, 0xb7, 0xd5, 0xe3, 0xbf, 0xcf, 0x6c, 0xd3,
+        0x47, 0xc1, 0x14, 0x0d, 0x01, 0xe1, 0xc9, 0x3f, 0xef, 0x18,
+        0x68, 0xa7, 0xe0, 0xc8, 0x00, 0x86, 0x1f, 0xf5, 0xfb, 0x6a,
+        0xdb, 0x54, 0xd4, 0x09, 0xd2, 0xcd, 0x37, 0x23, 0xd1, 0xee,
+        0x2d, 0xac, 0x60, 0x4e, 0xe7, 0x79, 0x90, 0xb1, 0x9a, 0x0f,
+        0x6f, 0x02, 0x7d, 0x0a, 0xa1, 0xa5, 0xa0, 0x06, 0x55, 0x24,
+        0x58, 0xc0, 0xbd, 0x91, 0x2b, 0xf3, 0x96, 0x9c, 0x07, 0xdc,
+        0xf9, 0x29, 0x35, 0x04, 0x81, 0x7a, 0x82, 0xb8, 0x4c, 0x3d,
+        0x65, 0x11, 0x34, 0xfc, 0x10, 0x32
+    ]
+
+    if __name__ == '__main__':
+        for i in range(len(flag_en)):
+            flag_en[i] ^= ASE_xor[i]
+        k = b'\x00\x00\x00K\x00\x00\x00C\x00\x00\x00S\x00\x00\x00C'
+        tmp1 = flag_en[0:16]
+        tmp1 = bytes(tmp1[::-1])
+        tmp1 = aesdeclast(tmp1, k)
+        tmp1 = aesdec(tmp1, k)
+        tmp1 = list(tmp1[::-1])
+        for i in range(len(tmp1)):
+            tmp1[i] ^= KCSC[i]
+        for i in range(16):
+            flag_en[i] = tmp1[i]
+        tmp1 = flag_en[16:32]
+        tmp1 = bytes(tmp1[::-1])
+        tmp1 = aesdeclast(tmp1, k)
+        tmp1 = aesdec(tmp1, k)
+        tmp1 = list(tmp1[::-1])
+        for i in range(len(tmp1)):
+            tmp1[i] ^= KCSC[i]
+        for i in range(16, 32):
+            flag_en[i] = tmp1[i - 16]
+
+        v4, v5 = 0, 0
+        for i in range(0x20):
+            v5 += 1
+            v4 = (v4 + map[v5]) & 0xff
+            map[v4], map[v5] = map[v5], map[v4]
+            flag_en[i] ^= map[(map[v4] + map[v5]) & 0xff]
+
+        for i in range(0x20):
+            flag_en[i] ^= (i + 0xEF) & 0xFF
+        for i in range(0x20):
+            flag_en[i] ^= 0xEF
+        for i in range(0, 0x20, 4):
+            flag_en[i] ^= 0xEF
+            flag_en[i + 1] ^= 0xBE    
+            flag_en[i + 2] ^= 0xAD
+            flag_en[i + 3] ^= 0xDE
+        for i in range(0, 0x20, 4):
+            flag_en[i] ^= 0xBE
+            flag_en[i + 1] ^= 0xBA
+            flag_en[i + 2] ^= 0xFE
+            flag_en[i + 3] ^= 0xC0
+        for i in range(0x20):
+            flag_en[i] ^= (i + 0xCD) & 0xFF
+        for i in range(0x20):
+            flag_en[i] ^= 0xCD
+        for i in range(0, 0x20, 4):
+            flag_en[i] ^= 0xBE
+            flag_en[i + 1] ^= 0xBA
+            flag_en[i + 2] ^= 0xAD
+            flag_en[i + 3] ^= 0xDE
+        for i in range(0, 0x20, 4):
+            flag_en[i] ^= 0xEF
+            flag_en[i + 1] ^= 0xBE
+            flag_en[i + 2] ^= 0xFE
+            flag_en[i + 3] ^= 0xC0
+        for i in range(0x20):
+            flag_en[i] ^= (i + 0xAB) & 0xFF
+        for i in range(0x20):
+            flag_en[i] ^= 0xAB
+        for i in range(0x20):
+            print(end = chr(flag_en[i]))
+    ```
+
+- Sự sida bắt đầu xuất hiện khi chúng ta thu được flag là:
+
+    ```txt
+    KCSC{y0u_5h0uldn'7_5ubm17_m3!!!}
+    ``` 
+
+    Mía `flag` mà đọc xong biết lun là fake, vì thực sự là việc tìm cái hàm `aesdec` và `aesdeclast` đã rát là khó roài nhưng mà vẫn chưa phải là mục đích chính của bài này. Liệu chúng ta có bỏ qua một chỗ nào đó hay bị dính phải anti_debug mà không biết ko nhỉ.
+
+- Đến lúc này vì mình không biết là mình đã bỏ qua cái gì quan trọng hay không hay mình cũng không biết là mình bị dính anti debug từ lúc nào, vậy mình sẽ chơi style đọc hết tất cả các hàm trong bài mang tên **Shift F3** thần thánh. Sau một hồi đọc thì mình tìm thấy một hàm khá là lạ:
+
+    ![alt text](IMG/5/image-5.png)
+
+    Thực hiện xrefs liên tục để xem hàm đó được gọi trong hàm nào, thì điều bất ngờ tui phát hiện ra ở chính cái hàm `RC4` thứ 2 của chúng ta:
+
+    ![alt text](IMG/5/image-8.png)
+
+    Hàm RC4 này return về một hàm khác chứ không hề chỉ đơn giản là hàm RC4 thông thướng, mía ý đồ của tác giá cố tình giấu đi rùi, heheheh bây giờ chúng ta bắt đầu thực hiện phân tích hàm đó.
+
+- Bây giờ chúng ta tiến hành phân tích hàm `sub_8A12B0`:
+
+    ```C
+    int sub_8A12B0()
+    {
+    DWORD CurrentProcessId; // eax
+    int v2; // [esp+10h] [ebp-288h]
+    int v3; // [esp+1Ch] [ebp-27Ch]
+    int v4; // [esp+20h] [ebp-278h]
+    int v5; // [esp+24h] [ebp-274h]
+    HANDLE hSnapshot; // [esp+28h] [ebp-270h]
+    unsigned __int8 v7; // [esp+57h] [ebp-241h]
+    PROCESSENTRY32W pe; // [esp+5Ch] [ebp-23Ch] BYREF
+    DWORD flOldProtect; // [esp+288h] [ebp-10h] BYREF
+    char Src[6]; // [esp+28Ch] [ebp-Ch] BYREF
+
+    v7 = 0;
+    GetCurrentProcessId();
+    CurrentProcessId = GetCurrentProcessId();
+    v2 = sub_8A11F0(CurrentProcessId);
+    memset(&pe, 0, sizeof(pe));
+    pe.dwSize = 556;
+    hSnapshot = CreateToolhelp32Snapshot(2u, 0);
+    if ( Process32FirstW(hSnapshot, &pe) )
+    {
+        while ( 1 )
+        {
+        if ( pe.th32ProcessID == v2 )
+        {
+            v5 = wcscmp(pe.szExeFile, (const unsigned __int16 *)sub_8A1180(aFlagchecker4Ex));
+            if ( v5 )
+            v5 = v5 < 0 ? -1 : 1;
+            if ( v5 )
+            {
+            v4 = wcscmp(pe.szExeFile, (const unsigned __int16 *)sub_8A1180(aCmdExe));
+            if ( v4 )
+                v4 = v4 < 0 ? -1 : 1;
+            if ( v4 )
+            {
+                v3 = wcscmp(pe.szExeFile, (const unsigned __int16 *)sub_8A1180(aExplorerExe));
+                if ( v3 )
+                v3 = v3 < 0 ? -1 : 1;
+                if ( v3 )
+                break;
+            }
+            }
+        }
+        if ( !Process32NextW(hSnapshot, &pe) )
+            goto LABEL_14;
+        }
+        v7 = 1;
+    }
+    LABEL_14:
+    if ( !v7 )
+    {
+        v7 = 0;
+        Src[0] = 0x68;
+        Src[5] = 0xC3;
+        *(_DWORD *)&Src[1] = sub_8A1A80;
+        VirtualProtect(AES, 6u, 0x40u, &flOldProtect);
+        memcpy(AES, Src, 6u);
+    }
+    CloseHandle(hSnapshot);
+    return v7;
+    }
+    ```
+
+    Khoan hãy quan tâm đến từng chi tiết của hàm này mà thực hiện nhìn xuống `LABEL_14` với nội dung như sau:
+
+    ```C
+    LABEL_14:
+    if ( !v7 )
+    {
+        v7 = 0;
+        Src[0] = 0x68;
+        Src[5] = 0xC3;
+        *(_DWORD *)&Src[1] = sub_8A1A80;
+        VirtualProtect(AES, 6u, 0x40u, &flOldProtect);
+        memcpy(AES, Src, 6u);
+    }
+    CloseHandle(hSnapshot);
+    return v7;
+    ```
+
+    Đến đây là một chương trình tạo ra một đoạn `Assembly`:
+
+    - **sub_8A1A80**: Hàm này chính là cái hàm là lạ chúng ta tìm được.
+
+    - **0x68**: Opcode của lệnh `push`.
+
+    - **0xC3**: Opcode của lệnh `ret`.
+
+    ```C
+    *(_DWORD *)&Src[1] = sub_8A1A80;
+    ``` 
+
+    Phép gán này thực hiện việc lưu trữ địa chỉ của hàm `sub_8A1A80` vào các byte từ `Src[1]` đến `Src[4]`. Điều này nghĩa là sau lệnh `PUSH` ở byte 0 (**0x68**), địa chỉ của hàm `sub_8A1A80` sẽ được đặt vào stack. Điều này có nghĩa là sau khi đoạn mã được thực thi, nó sẽ đẩy địa chỉ của hàm `sub_8A1A80` lên ngăn xếp và trả về địa chỉ đó.
+
+    ```C
+    VirtualProtect(AES, 6u, 0x40u, &flOldProtect);
+    ```
+
+    Hàm `VirtualProtect` là `API` của Windows, dùng để thay đổi quyền truy cập của một vùng bộ nhớ. Cụ thể, nó sẽ thay đổi quyền truy cập của vùng nhớ được trỏ tới bởi `AES` với kích thước `6` byte.
+    
+    `0x40` là một giá trị quyền truy cập, tương ứng với `PAGE_EXECUTE_READWRITE`, cho phép vùng bộ nhớ có thể đọc, ghi và thực thi.
+
+    `flOldProtect` là một biến lưu trữ quyền truy cập cũ của vùng bộ nhớ trước khi thay đổi, để có thể khôi phục lại sau đó nếu cần.
+
+    ```C
+    memcpy(AES, Src, 6u);
+    ```
+
+    Hàm `memcpy` sao chép **6** byte từ `Src` vào vùng nhớ `AES`.
+
+    Vùng nhớ `AES` giờ đã được bảo vệ bằng quyền `PAGE_EXECUTE_READWRITE`, vì vậy nội dung sao chép này sẽ có thể thực thi được nếu nó chứa mã máy.
+
+    Nội dung mã asm `Src` có cú pháp như sau:
+
+    ```asm
+    push sub_511A80
+    retn
+    ```
+
+    ![alt text](IMG/5/image-9.png)
+
+    Đoạn assembly này đẩy địa chỉ của hàm `sub_511A80` vào stack, sau đó `ret` sẽ lấy địa chỉ đó ra và nhảy đến đó.
+
+    Vậy là ta đã sửa lại hàm `AES`. Từ đây, mỗi khi gọi `AES`, đoạn assembly trên sẽ được thực thi, và ta sẽ nhảy đến hàm `sub_511A80`.
+
+    Uhhh, nhìn lướt qua thì có vẻ như là đây là là một phần nào đó của `antidebug` roài, chúng ta xem những thứ bên trên là gì.
+
+    Đoạn mã chall cung cấp có chức năng kiểm tra xem tiến trình hiện tại có phải là một trong những tiến trình cụ thể (`Flagchecker4Ex`, `CmdExe`, `ExplorerExe`) hay không, dựa trên `ID` của tiến trình cha.
+
+    - **Khởi tạo:**
+
+        `CurrentProcessId` lưu `ID` của tiến trình hiện tại.
+
+        `v2` lưu `ID` của tiến trình cha, được lấy từ hàm `sub_6D11F0` (mà bạn đã cho biết là `sub_A511F0`).
+    
+    - **Snapshot và Duyệt Tiến Trình:**
+
+        Tạo một snapshot của tất cả các tiến trình hiện tại.
+        
+        Sử dụng `Process32FirstW` và `Process32NextW` để duyệt qua từng tiến trình.
+    
+    - **Kiểm tra Tiến Trình:**
+
+        Nếu ID của tiến trình hiện tại **pe.th32ProcessID** trùng với `ID` của tiến trình cha `v2`:
+        
+        So sánh tên tiến trình với các tên được định nghĩa trước (`Flagchecker4Ex`, `CmdExe`, `ExplorerExe`) bằng `wcscmp`.
+
+        Nếu tên tiến trình không khớp với bất kỳ tên nào, vòng lặp sẽ dừng lại.
+        
+    - **Kết quả:**
+
+        Nếu tên của tiến trình cha không trùng với bất kỳ tên nào đã kiểm tra, thì biến **v7** sẽ được đặt thành **1**, cho thấy rằng tiến trình cha không phải là một trong những tiến trình cụ thể được kiểm tra. 
+
+    Do chúng ta đang debug bằng IDA nên tiến trình của chúng ta lúc này là `ida.exe`:
+
+    ![alt text](IMG/5/image-10.png)
+
+    Đây là một phần kiểm tra để chống `debug`. Chúng ta thực hiện `setIP` để nhảy vô đúng luồng chương trình thoai.
+
+- Come back lại phân tích hàm `AES`:
+
+    ```C
+    int __usercall sub_8A1A80@<eax>(int a1@<ebp>, const void *input)
+    {
+    int result; // eax
+    unsigned __int8 k; // [esp-47h] [ebp-53h]
+    unsigned __int8 j; // [esp-46h] [ebp-52h]
+    unsigned __int8 jj; // [esp-45h] [ebp-51h]
+    unsigned __int8 ii; // [esp-44h] [ebp-50h]
+    unsigned __int8 n; // [esp-43h] [ebp-4Fh]
+    unsigned __int8 m; // [esp-42h] [ebp-4Eh]
+    unsigned __int8 i; // [esp-41h] [ebp-4Dh]
+    __int128 v10; // [esp-40h] [ebp-4Ch] BYREF
+    __m128 v11[2]; // [esp-24h] [ebp-30h] BYREF
+    int v12; // [esp+0h] [ebp-Ch]
+    int v13; // [esp+4h] [ebp-8h]
+    int retaddr; // [esp+Ch] [ebp+0h]
+
+    v12 = a1;
+    v13 = retaddr;
+    qmemcpy(v11, input, sizeof(v11));
+    for ( i = 0; i < 0x20u; ++i )
+        v11[0].m128_i8[i] = (-120 - i) ^ i;
+    for ( j = 0; j < 0x20u; ++j )
+        v11[0].m128_i8[j] = sub_D316B0(0x88u, v11[0].m128_u8[j]);
+    v10 = xmmword_D33180;
+    for ( k = 0; k < 0x58u; ++k )
+    {
+        AES_little(v11, (__m128 *)&v10);
+        AES_little(&v11[1], (__m128 *)&v10);
+    }
+    for ( m = 0; m < 0x20u; ++m )
+        *((_BYTE *)input + m) = ROL_8bit(*((_BYTE *)input + m), m & 7);
+    for ( n = 0; n < 0x20u; ++n )
+        *((_BYTE *)input + n) ^= v11[0].m128_u8[n];
+    for ( ii = 0; ii < 0x20u; ++ii )
+        *((_BYTE *)input + ii) = ROL_8bit(*((_BYTE *)input + ii), 8 - (ii & 7));
+    for ( jj = 0; ; ++jj )
+    {
+        result = jj;
+        if ( jj >= 0x20u )
+        break;
+        *((_BYTE *)input + jj) ^= -1 - v11[0].m128_i8[jj];
+    }
+    return result;
+    }
+    ```
+
+- Đến đoạn này thì ta thấy input cúa chúng ta có một số sự thay đổi nho nhỏ thông phép dịch bit sang bên trái, phép xor với giá trị **v11[0].m128_u8[n]**, phép dịch bit sang bên trái và phép xor một lần nữa, và đương nhiên là những giá trị của `v11[]` là hoàn toàn cố định khi được tính ở trên (thông qua phép gán, phép tính lũy thừa mod 251, phép `aesenc` và `aesenclast`). Đến lúc này thì việc làm ngược lại chỉ là thủ tục nên mình viết sc lun.
+
+    ```python
+    flag_en = [
+        0x9c, 0x87, 0x9c, 0x6e, 0x64, 0x27, 0x3b, 0x78, 0x71, 0x53,
+        0x2b, 0x6d, 0xd4, 0x0e, 0x82, 0x22, 0x5d, 0xc4, 0xe2, 0xe8,
+        0x07, 0xb9, 0x85, 0xa7, 0x49, 0x9a, 0x6d, 0xd4, 0xfc, 0x64,
+        0xba, 0x02
+    ]
+
+    KCSC = [
+        0x43, 0x00, 0x00, 0x00, 0x53, 0x00, 0x00, 0x00, 0x43, 0x00, 
+        0x00, 0x00, 0x4B, 0x00, 0x00, 0x00
+    ]
+
+    ASE_xor = [
+        0x1D, 0x97, 0x2B, 0x75, 0x6B, 0x11, 0xA2, 0xA5, 0xEC, 0x95, 
+        0x5C, 0x49, 0xE6, 0x04, 0x33, 0x92, 0xEC, 0x44, 0xA1, 0x2A, 
+        0xEC, 0x61, 0x46, 0x88, 0xC8, 0x49, 0xE8, 0x6D, 0x75, 0xD7, 
+        0xF7, 0x20
+    ]
+    map = [
+        0x89, 0xcd, 0x32, 0x41, 0x9a, 0x7c, 0xe5, 0x51, 0xf1, 0xc2,
+        0xa1, 0x76, 0x96, 0x59, 0x5f, 0x7a, 0x4f, 0x47, 0x88, 0x70,
+        0x4c, 0x63, 0x28, 0xa4, 0x21, 0x90, 0xea, 0x00, 0x09, 0xb0,
+        0x8f, 0x16, 0x3a, 0x8d, 0x3e, 0x9f, 0x8b, 0xe6, 0x74, 0x33,
+        0x40, 0xa2, 0xa8, 0x39, 0x2a, 0x36, 0xc7, 0x5b, 0xf0, 0xb4,
+        0xd7, 0x87, 0xde, 0xf7, 0x4a, 0x8a, 0x77, 0x30, 0x75, 0xaf,
+        0x94, 0x5a, 0xdf, 0x67, 0x48, 0xdd, 0x52, 0x93, 0xa3, 0x2f,
+        0xfe, 0xa6, 0x03, 0xd9, 0x4b, 0xc5, 0x5d, 0x62, 0x17, 0x66,
+        0xc6, 0x1e, 0xe4, 0xca, 0x46, 0x19, 0xd6, 0x92, 0x78, 0xec,
+        0xb5, 0x4d, 0xf4, 0xf2, 0x7b, 0x27, 0x8c, 0x31, 0xa9, 0x3b,
+        0x12, 0xaa, 0x73, 0x9d, 0x05, 0xe9, 0xb6, 0xab, 0x0b, 0x08,
+        0x97, 0x7e, 0xba, 0x9e, 0x20, 0x25, 0x71, 0x38, 0x80, 0x0e,
+        0x64, 0xeb, 0xe2, 0xcc, 0xfa, 0xce, 0xad, 0x44, 0x61, 0xf6,
+        0xff, 0x69, 0xd0, 0x13, 0x99, 0xfd, 0xda, 0x6b, 0x3c, 0x22,
+        0x56, 0x6e, 0xb2, 0x45, 0x26, 0x7f, 0xf8, 0x0c, 0xbc, 0x1b,
+        0x6d, 0xc4, 0x42, 0xd8, 0x84, 0x72, 0xb3, 0x8e, 0x43, 0x1d,
+        0xb9, 0x5c, 0xbe, 0x5e, 0x53, 0x83, 0xcb, 0x85, 0x95, 0x9b,
+        0xae, 0xe8, 0x15, 0xb7, 0xd5, 0xe3, 0xbf, 0xcf, 0x6c, 0xd3,
+        0xc3, 0xc1, 0x14, 0x0d, 0x01, 0xe1, 0xc9, 0x3f, 0xef, 0x18,
+        0x68, 0xa7, 0xe0, 0xc8, 0x2c, 0x86, 0x1f, 0xf5, 0xfb, 0x6a,
+        0xdb, 0x54, 0xd4, 0xbb, 0xd2, 0x49, 0x37, 0x23, 0xd1, 0xee,
+        0x2d, 0xac, 0x60, 0x4e, 0xe7, 0x79, 0x1c, 0xb1, 0x98, 0x0f,
+        0x6f, 0x02, 0x7d, 0x0a, 0xed, 0xa5, 0xa0, 0x06, 0x55, 0x24,
+        0x58, 0xc0, 0xbd, 0x91, 0x2b, 0xf3, 0x2e, 0x9c, 0x07, 0xdc,
+        0xf9, 0x29, 0x35, 0x04, 0x81, 0x57, 0x82, 0xb8, 0x50, 0x3d,
+        0x65, 0x11, 0x34, 0xfc, 0x10, 0x1a
+    ]
+
+    v9 = [
+        0xa4, 0xa9, 0x01, 0xff, 0x22, 0xd3, 0xa3, 0x06, 0xde, 0x2c,
+        0x17, 0x81, 0xa6, 0x70, 0xa6, 0xe6, 0x7b, 0xb6, 0x47, 0x02,      
+        0x7b, 0x8d, 0x2c, 0x0c, 0x4a, 0x17, 0x21, 0x91, 0x60, 0x72,      
+        0x08, 0xe4
+    ]
+
+    def ROR_8bit(a1, a2):
+        return ((a1 >> a2) | (a1 << (8 - a2))) & 0xff
+
+    if __name__ == '__main__':
+        for i in range(0x20):
+            flag_en[i] ^= (0xff - v9[i])
+        for i in range(0x20):
+            flag_en[i] = ROR_8bit(flag_en[i], 8 - (i & 7))
+        for i in range(0x20):
+            flag_en[i] ^= v9[i]
+        for i in range(0x20):
+            flag_en[i] = ROR_8bit(flag_en[i], i & 7)
+
+        v4, v5 = 0, 0
+        for i in range(0x20):
+            v5 += 1
+            v4 = (v4 + map[v5]) & 0xff
+            map[v4], map[v5] = map[v5], map[v4]
+            flag_en[i] ^= map[(map[v4] + map[v5]) & 0xff]
+
+        for i in range(0x20):
+            flag_en[i] ^= (i + 0xEF) & 0xFF
+        for i in range(0x20):
+            flag_en[i] ^= 0xEF
+        for i in range(0, 0x20, 4):
+            flag_en[i] ^= 0xEF
+            flag_en[i + 1] ^= 0xBE    
+            flag_en[i + 2] ^= 0xAD
+            flag_en[i + 3] ^= 0xDE
+        for i in range(0, 0x20, 4):
+            flag_en[i] ^= 0xBE
+            flag_en[i + 1] ^= 0xBA
+            flag_en[i + 2] ^= 0xFE
+            flag_en[i + 3] ^= 0xC0
+        for i in range(0x20):
+            flag_en[i] ^= (i + 0xCD) & 0xFF
+        for i in range(0x20):
+            flag_en[i] ^= 0xCD
+        for i in range(0, 0x20, 4):
+            flag_en[i] ^= 0xBE
+            flag_en[i + 1] ^= 0xBA
+            flag_en[i + 2] ^= 0xAD
+            flag_en[i + 3] ^= 0xDE
+        for i in range(0, 0x20, 4):
+            flag_en[i] ^= 0xEF
+            flag_en[i + 1] ^= 0xBE
+            flag_en[i + 2] ^= 0xFE
+            flag_en[i + 3] ^= 0xC0
+        for i in range(0x20):
+            flag_en[i] ^= (i + 0xAB) & 0xFF
+        for i in range(0x20):
+            flag_en[i] ^= 0xAB
+
+        for i in range(0x20):
+            print(end = chr(flag_en[i]))`
+    ```
+
+- Flag:
+
+    ```txt
+    KCSC{6r347!!!y0u_4r3_w1nn3r:333}
+    ```
+
 # 6_SHELTER (Medium)
 
-- Chall: [FILE](0_CHALL/6_SHELTER.rar).-->
-
+- Chall: [FILE](0_CHALL/6_SHELTER.rar).
 
 
 # 7_JUST_NOT_A_SIMLE_FLAG_CHECKER (hard)
