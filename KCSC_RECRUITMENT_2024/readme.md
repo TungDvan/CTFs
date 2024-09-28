@@ -1,6 +1,429 @@
-<!-- # 1_RAMSOM (eAsY, troller)
+# 0987
 
-- Chall: [FILE](0_CHALL/1_RAMSOM.rar). -->
+# 1_RAMSOM (eAsY, troller)
+
+- Chall: [FILE](0_CHALL/1_RAMSOM.rar).
+
+- Với bài này chúng ta được cung cấp cho một file thực thi dùng để mã hóa file, còn một file là file mã hóa. Chúng ta sẽ tiến hành phân tích file thực thi.
+
+    ```C
+    int __cdecl main(int argc, const char **argv, const char **envp)
+    {
+    char v4; // bl
+    char v5; // bl
+    char LastError; // al
+    char v7; // [esp+0h] [ebp-38h]
+    DWORD k; // [esp+4h] [ebp-34h]
+    unsigned int v9; // [esp+8h] [ebp-30h]
+    unsigned int m; // [esp+Ch] [ebp-2Ch]
+    unsigned int v11; // [esp+10h] [ebp-28h]
+    unsigned int i; // [esp+14h] [ebp-24h]
+    HANDLE hFile; // [esp+18h] [ebp-20h]
+    char v14; // [esp+1Fh] [ebp-19h]
+    _BYTE *lpBuffer; // [esp+20h] [ebp-18h]
+    DWORD Size; // [esp+24h] [ebp-14h]
+    DWORD n; // [esp+28h] [ebp-10h]
+    DWORD j; // [esp+2Ch] [ebp-Ch]
+    DWORD NumberOfBytesRead; // [esp+30h] [ebp-8h] BYREF
+
+    if ( argc == 2 )
+    {
+        hFile = CreateFileA(argv[1], 0xC0000000, 0, 0, 3u, 0x80u, 0);
+        if ( hFile == (HANDLE)-1 )
+        {
+        print("Cannot Open File!!!\n", v7);
+        return 1;
+        }
+        else
+        {
+        Size = GetFileSize(hFile, 0);
+        lpBuffer = malloc(Size);
+        if ( ReadFile(hFile, lpBuffer, Size, &NumberOfBytesRead, 0) )
+        {
+            for ( i = 0; i < 136; ++i )
+            {
+            for ( j = 0; j < Size; ++j )
+            {
+                v4 = ROL_8bit(lpBuffer[j], (j + i) % 8);
+                lpBuffer[j] = ROR_8bit(map[(j + i) % 256], (i + Size - j) % 8) ^ v4;
+            }
+            }
+            v11 = 0;
+            v9 = 0;
+            for ( k = 0; k < Size; ++k )
+            {
+            v11 = (v11 + 1) % 0x100;
+            v9 = (v9 + (unsigned __int8)map[v11]) % 0x100;
+            v14 = map[v11];
+            map[v11] = map[v9];
+            map[v9] = v14;
+            lpBuffer[k] ^= map[((unsigned __int8)map[v9] + (unsigned __int8)map[v11]) % 256];
+            }
+            for ( m = 0; m < 0x88; ++m )
+            {
+            for ( n = 0; n < Size; ++n )
+            {
+                v5 = ROR_8bit(lpBuffer[n], (n + m) % 8);
+                lpBuffer[n] = ROL_8bit(map[(n + m) % 0x100], (m + Size - n) % 8) ^ v5;
+            }
+            }
+            SetFilePointer(hFile, 0, 0, 0);
+            if ( WriteFile(hFile, lpBuffer, Size, &NumberOfBytesRead, 0) )
+            {
+            print("File is Encrypted!!!\n", v7);
+            return 0;
+            }
+            else
+            {
+            LastError = GetLastError();
+            print("Cannot Write File (Error %d)\n", LastError);
+            CloseHandle(hFile);
+            return 1;
+            }
+        }
+        else
+        {
+            GetLastError();
+            print("Cannot Read File %s (Error %d)!!!\n", (char)argv[1]);
+            CloseHandle(hFile);
+            return 1;
+        }
+        }
+    }
+    else
+    {
+        print("Usage: %s [FileName]\n", (char)*argv);
+        return 1;
+    }
+    }
+    ```
+
+- Bài này mã hóa khá là thân thiện, ban đầu chương trình sẽ thực hiện đọc dữ liệu trong file, đầu tiên sẽ thực hiện lặp `136` lần, mỗi lần lặp thực hiện biến đổi kí tự thứ i ở trong file, sau đó thực hiện mã hóa `RC4`, rùi thực hiện lại vòng lặp `136` lần.
+
+- Ta dễ dàng mô phỏng lại file mã hóa này bằng ngôn ngữ python.
+
+    ```python
+    input = [
+        0x74, 0x75, 0x6E, 0x67, 0x5F, 0x64, 0x65, 0x70, 0x5F, 0x74, 
+        0x72, 0x61, 0x69, 0x5F, 0x63, 0x6F, 0x5F, 0x6D, 0x6F, 0x74, 
+        0x5F, 0x6B, 0x68, 0x6F, 0x6E, 0x67, 0x5F, 0x63, 0x6F, 0x5F, 
+        0x68, 0x61, 0x69
+    ]   # tung_dep_trai_co_mot_khong_co_hai
+
+    map = [
+        0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 
+        0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76, 0xCA, 0x82, 0xC9, 0x7D, 
+        0xFA, 0x59, 0x47, 0xF0, 0xAD, 0xD4, 0xA2, 0xAF, 0x9C, 0xA4, 
+        0x72, 0xC0, 0xB7, 0xFD, 0x93, 0x26, 0x36, 0x3F, 0xF7, 0xCC, 
+        0x34, 0xA5, 0xE5, 0xF1, 0x71, 0xD8, 0x31, 0x15, 0x04, 0xC7, 
+        0x23, 0xC3, 0x18, 0x96, 0x05, 0x9A, 0x07, 0x12, 0x80, 0xE2, 
+        0xEB, 0x27, 0xB2, 0x75, 0x09, 0x83, 0x2C, 0x1A, 0x1B, 0x6E, 
+        0x5A, 0xA0, 0x52, 0x3B, 0xD6, 0xB3, 0x29, 0xE3, 0x2F, 0x84, 
+        0x53, 0xD1, 0x00, 0xED, 0x20, 0xFC, 0xB1, 0x5B, 0x6A, 0xCB, 
+        0xBE, 0x39, 0x4A, 0x4C, 0x58, 0xCF, 0xD0, 0xEF, 0xAA, 0xFB, 
+        0x43, 0x4D, 0x33, 0x85, 0x45, 0xF9, 0x02, 0x7F, 0x50, 0x3C, 
+        0x9F, 0xA8, 0x51, 0xA3, 0x40, 0x8F, 0x92, 0x9D, 0x38, 0xF5, 
+        0xBC, 0xB6, 0xDA, 0x21, 0x10, 0xFF, 0xF3, 0xD2, 0xCD, 0x0C, 
+        0x13, 0xEC, 0x5F, 0x97, 0x44, 0x17, 0xC4, 0xA7, 0x7E, 0x3D, 
+        0x64, 0x5D, 0x19, 0x73, 0x60, 0x81, 0x4F, 0xDC, 0x22, 0x2A, 
+        0x90, 0x88, 0x46, 0xEE, 0xB8, 0x14, 0xDE, 0x5E, 0x0B, 0xDB, 
+        0xE0, 0x32, 0x3A, 0x0A, 0x49, 0x06, 0x24, 0x5C, 0xC2, 0xD3, 
+        0xAC, 0x62, 0x91, 0x95, 0xE4, 0x79, 0xE7, 0xC8, 0x37, 0x6D, 
+        0x8D, 0xD5, 0x4E, 0xA9, 0x6C, 0x56, 0xF4, 0xEA, 0x65, 0x7A, 
+        0xAE, 0x08, 0xBA, 0x78, 0x25, 0x2E, 0x1C, 0xA6, 0xB4, 0xC6, 
+        0xE8, 0xDD, 0x74, 0x1F, 0x4B, 0xBD, 0x8B, 0x8A, 0x70, 0x3E, 
+        0xB5, 0x66, 0x48, 0x03, 0xF6, 0x0E, 0x61, 0x35, 0x57, 0xB9, 
+        0x86, 0xC1, 0x1D, 0x9E, 0xE1, 0xF8, 0x98, 0x11, 0x69, 0xD9, 
+        0x8E, 0x94, 0x9B, 0x1E, 0x87, 0xE9, 0xCE, 0x55, 0x28, 0xDF, 
+        0x8C, 0xA1, 0x89, 0x0D, 0xBF, 0xE6, 0x42, 0x68, 0x41, 0x99, 
+        0x2D, 0x0F, 0xB0, 0x54, 0xBB, 0x16
+    ]
+
+    def ROL_8bit(a1, a2):
+        return ((a1 >> (8 - a2)) | (a1 << a2)) & 0xff
+
+    def ROR_8bit(a1, a2):
+        return ((a1 << (8 - a2)) | (a1 >> a2)) & 0xff
+
+    if __name__ == "__main__":
+        for i in range(136):
+            for j in range(len(input)):
+                v4 = ROL_8bit(input[j], (i + j) % 8)
+                input[j] = ROR_8bit(map[(i + j) % 256], (i + len(input) - j) % 8) ^ v4
+        v11, v9 = 0, 0
+        for i in range(len(input)):
+            v11 = (v11 + 1) % 256
+            v9 = (v9 + map[v11]) % 256
+            map[v11], map[v9] = map[v9], map[v11]
+            input[i] ^= map[(map[v9] + map[v11]) % 256]
+        for i in range(136):
+            for j in range(len(input)):
+                v4 = ROR_8bit(input[j], (i + j) % 8)
+                input[j] = ROL_8bit(map[(i + j) % 256], (i + len(input) - j) % 8) ^ v4
+        for i in range(len(input)):
+            if i % 10 == 9: print(f'0x{input[i]:02x}', end = ',\n')
+            else: print(f'0x{input[i]:02x}', end = ', ')
+    ```
+
+- Khi tui làm bài này thì tui tui có một chút mất thời gian trong việc ngồi build lại chương trình để có thể dịch ngược lại file mã hóa (mindset chỗ này hơi sida khi tui nghĩ là file đó chứ nội dung flag mà tui không nhận ra rằng file có kích thước quá là lớn để brute force, đáng nhẽ ra tui phải đoán nó là file thực thi thì lúc đó tui sẽ nghĩ ra một hướng khác để tránh mất thời gian ngồi **tấn công vũ phu** xử lý đến đoạn này). Source code để có thể **vũ phu** bài này.
+
+    ```python
+    map = [
+        0x63, 0x10, 0x0d, 0x9f, 0x82, 0x1f, 0x80, 0x16, 0x15, 0x04,
+        0x88, 0x25, 0xba, 0x67, 0x2c, 0x6c, 0x13, 0xd0, 0xbd, 0xd6,
+        0x1b, 0x5e, 0x69, 0x48, 0xc0, 0xfc, 0x68, 0x24, 0xab, 0x8e,
+        0x6a, 0x0c, 0x8a, 0x4b, 0x93, 0x26, 0x36, 0x3f, 0xf7, 0xcc,
+        0x34, 0xa5, 0xe5, 0xf1, 0x71, 0xd8, 0x31, 0x30, 0x01, 0xc7,
+        0x23, 0xc3, 0x18, 0x96, 0x05, 0x9a, 0x07, 0x12, 0x6f, 0xe2,
+        0xeb, 0x27, 0xb2, 0x75, 0x09, 0x83, 0x9c, 0x1a, 0xfa, 0x6e,
+        0x5a, 0xa0, 0x52, 0x3b, 0x7d, 0xb3, 0x29, 0xe3, 0x2f, 0x84,      
+        0x53, 0xd1, 0x00, 0xed, 0x20, 0xd4, 0xb1, 0x5b, 0x72, 0xcb,      
+        0xbe, 0x39, 0x4a, 0x4c, 0x58, 0xcf, 0xf2, 0xef, 0xaa, 0xfb,
+        0x43, 0x4d, 0x33, 0x85, 0x45, 0xf9, 0x02, 0x7f, 0x50, 0x3c,      
+        0x7b, 0xa8, 0x51, 0xa3, 0x40, 0x8f, 0x92, 0x9d, 0x38, 0xf5,      
+        0xbc, 0xb6, 0xda, 0x21, 0x7c, 0xff, 0xf3, 0xd2, 0xcd, 0xad,      
+        0xca, 0xec, 0x5f, 0x97, 0x44, 0x17, 0xc4, 0xa7, 0x7e, 0x3d,      
+        0x64, 0x5d, 0x19, 0x73, 0x60, 0x81, 0x4f, 0xdc, 0x22, 0x2a,      
+        0x90, 0xd7, 0x46, 0xee, 0xb8, 0x14, 0xde, 0x59, 0x0b, 0xdb,      
+        0xe0, 0x32, 0x3a, 0x0a, 0x49, 0x06, 0xaf, 0x5c, 0xc2, 0xd3,      
+        0xac, 0x62, 0x91, 0x95, 0xe4, 0x79, 0xe7, 0xc8, 0x37, 0x6d,      
+        0x8d, 0xd5, 0x4e, 0xa9, 0x76, 0x56, 0xf4, 0xea, 0x65, 0x7a,
+        0xae, 0x08, 0xfe, 0x78, 0x2b, 0x2e, 0x1c, 0xa6, 0xb4, 0xc6,      
+        0xe8, 0xdd, 0x74, 0x6b, 0xfd, 0xc9, 0x8b, 0xb7, 0x70, 0x3e,      
+        0xb5, 0x66, 0xf0, 0x03, 0xf6, 0x0e, 0x61, 0x35, 0x57, 0xb9,      
+        0x86, 0xc1, 0x1d, 0x9e, 0xe1, 0xf8, 0x98, 0x11, 0x47, 0xd9,      
+        0xa4, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf,      
+        0x8c, 0xa1, 0x89, 0x77, 0xbf, 0xe6, 0x42, 0xa2, 0x41, 0x99,      
+        0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0xc5
+    ]
+
+    flag_en = [
+        0xe0, 0x9b, 0x44, 0x64, 0x15, 0x35, 0x38, 0x0d, 0x0b, 0xc9,
+        0xd6, 0xda, 0x64, 0xb4, 0x75, 0x19, 0x49, 0xf1, 0x64, 0xc2,
+        0x22, 0xec, 0x4e, 0x9c, 0xcf, 0x11, 0x64, 0x23, 0x7b, 0xce,
+        0x41, 0xce, 0xaa
+    ]
+
+    def ROL_8bit(a1, a2):
+        return ((a1 >> (8 - a2)) | (a1 << a2)) & 0xff
+
+    def ROR_8bit(a1, a2):
+        return ((a1 << (8 - a2)) | (a1 >> a2)) & 0xff
+
+    for i in range(135, -1, -1):
+        for j in range(0, len(flag_en)):
+            for _ in range(256):
+                if ROL_8bit(map[(i + j) % 256], (i + len(flag_en) - j) % 8) ^ ROR_8bit(_, (i + j) % 8) == flag_en[j]:
+                    flag_en[j] = _
+                    break
+
+    swaps = [(1, 124), (2, 243), (3, 110), (4, 96), (5, 203), (6, 58), (7, 255), (8, 47), (9, 48), (10, 151), (11, 194), (12, 192), (13, 151), (14, 66), (15, 184), (16, 130), (17, 4), (18, 205), (19, 74), (20, 68), (21, 157), (22, 228), (23, 212), (24, 129), (25, 85), (26, 247), (27, 166), (28, 66), (29, 230), (30, 88), (31, 24), (32, 207), (33, 204)]
+    for v11, v9 in reversed(swaps):
+        map[v11], map[v9] = map[v9], map[v11]
+
+    v11, v9 = 0, 0
+    for i in range(len(flag_en)):
+        v11 = (v11 + 1) % 256
+        v9 = (v9 + map[v11]) % 256
+        map[v11], map[v9] = map[v9], map[v11]
+        flag_en[i] ^= map[(map[v9] + map[v11]) % 256]
+
+    swaps = [(1, 124), (2, 243), (3, 110), (4, 96), (5, 203), (6, 58), (7, 255), (8, 47), (9, 48), (10, 151), (11, 194), (12, 192), (13, 151), (14, 66), (15, 184), (16, 130), (17, 4), (18, 205), (19, 74), (20, 68), (21, 157), (22, 228), (23, 212), (24, 129), (25, 85), (26, 247), (27, 166), (28, 66), (29, 230), (30, 88), (31, 24), (32, 207), (33, 204)]
+    for v11, v9 in reversed(swaps):
+        map[v11], map[v9] = map[v9], map[v11]
+
+    for i in range(135, -1, -1):
+        for j in range(0, len(flag_en)):
+            for _ in range(256):
+                if ROR_8bit(map[(i + j) % 256], (i + len(flag_en) - j) % 8) ^ ROL_8bit(_, (i + j) % 8) == flag_en[j]:
+                    flag_en[j] = _
+                    break
+
+    for i in flag_en: print(end = chr(i))
+    ```
+
+- Uhm thì sau khi viét được hàm này xong thì mình thực hiện dịch ngược lại file `important`, mình cứ nghĩ file đó là file text chứa flag nên giải mã nó, nhưng thực ra nó là một file thực thi và nếu mà có dịch ngược lại thì siêu lâu, trong lúc đó thì mình cũng không hiểu có thể làm như thế nào.
+
+- Sau khi đoán được là không thể thực hiện dịch ngược lại vì file thực thi thì dữ liệu nó quá lớn nên thời gian brute force rất là lâu, vậy nên lúc đó mình mới thực hiện thử mã hóa 1 file 2 lần xem sao, thì bất ngờ thay đây là mã hóa đối xứng lun @@.
+
+- Nếu trong bài toán chỉ có mỗi `RC4` thì mình có thể đoán là mã hóa đối xứng nhưng mà do có phần dịch 8bit kia nên mình cũng không chắc, như vậy đây cũng là một kinh nghiệm cho mình nếu gặp một bài mà **brute force** cảm giác như là không thể thì nên check xem có phải mã hóa đối xứng hay không.
+
+- Sau khi thực hiện mã hóa file kia thêm một lần nữa, ném vô `DIE` thì chúng ta được thông tin sau:
+
+    ![alt text](IMG/1/image.png)
+
+    Như vậy file thực thi này được viết bằng ngôn ngữ `C#`, vậy chúng ta sẽ dùng `dnSpy` để thực hiện debug.
+
+- Sau khi tìm một hồi thì chúng ta sẽ tìm được phần chính của file này ở trong đây (1 trong 2 cái đều được):
+
+    ![alt text](IMG/1/image-1.png)
+
+- Ở đây chúng ta thấy:
+
+    ![alt text](IMG/1/image-2.png)
+
+    ```cs
+    using System;
+    using System.Diagnostics;
+    using System.Threading;
+
+    namespace ConsoleApp1
+    {
+        // Token: 0x02000003 RID: 3
+        internal class Program
+        {
+            // Token: 0x06000004 RID: 4 RVA: 0x00002194 File Offset: 0x00000394
+            private static void Main(string[] args)
+            {
+                Console.WriteLine("Yah sure hay nhap gi do vao: ");
+                if (Console.ReadLine() == "odin_bu_dai_tao")
+                {
+                    Console.WriteLine("Dung voi mung, chua xong dau you motherfucker. Nhap tiep: ");
+                    if (Console.ReadLine() == "mx0001d_vua_crypto")
+                    {
+                        Console.WriteLine("Here is your flag: KCSC{neu cam thay rev qua kho voi ban, hay lam crypto}");
+                        Console.WriteLine("Submit nhanh di, khong hoi han cung khong kip dau, va nhung gi ban thay khong co gi la thua thai ca, ke ca ham Encrypt");
+                        Thread.Sleep(10000);
+                        Process.Start("shutdown", "/s /t 0");
+                    }
+                }
+            }
+        }
+    }
+    ```
+
+    Đây là một đoạn code yêu cầu thực hiện kiểm tra nhập xem có đúng 2 chuỗi hay không, nếu đúng thì thực hiện in ra fake flag, sau khi hiển thị flag thì chương trình có một thông báo và có đề cập đến hàm `Encrypt`, dù trong hàm này không thấy hàm đó, rùi chương trình đếm ngược 10s rùi tự động tắt máy, troll troll VN.
+
+- Bây giờ chúng ta sẽ tìm hàm `Encrypt` xem sao:
+
+    ![alt text](IMG/1/image-3.png)
+
+    ```cs
+    using System;
+    using System.IO;
+    using System.Security.Cryptography;
+    using System.Text;
+
+    namespace ConsoleApp1
+    {
+        // Token: 0x02000002 RID: 2
+        internal class Encyptor
+        {
+            // Token: 0x06000001 RID: 1 RVA: 0x000020E4 File Offset: 0x000002E4
+            public static string Encrypt(string input)
+            {
+                byte[] bytes = Encoding.ASCII.GetBytes(Encyptor.s2);
+                byte[] bytes2 = Encoding.ASCII.GetBytes(Encyptor.s);
+                byte[] bytes3 = new PasswordDeriveBytes(Encyptor.strPassword, bytes2, Encyptor.strHashName, Encyptor.iterations).GetBytes(Encyptor.num / 8);
+                ICryptoTransform cryptoTransform = new RijndaelManaged
+                {
+                    Mode = 1
+                }.CreateEncryptor(bytes3, bytes);
+                MemoryStream memoryStream = new MemoryStream();
+                CryptoStream cryptoStream = new CryptoStream(memoryStream, cryptoTransform, 1);
+                byte[] bytes4 = Encoding.UTF8.GetBytes(input);
+                cryptoStream.Write(bytes4, 0, bytes4.Length);
+                cryptoStream.FlushFinalBlock();
+                byte[] inArray = memoryStream.ToArray();
+                memoryStream.Close();
+                cryptoStream.Close();
+                return Convert.ToBase64String(inArray);
+            }
+
+            // Token: 0x04000001 RID: 1
+            private static string strPassword = "amp4Z0wpKzJ5Cg0GDT5sJD0sMw0IDAsaGQ1Afik6NwXr6rrSEQE=";
+
+            // Token: 0x04000002 RID: 2
+            private static string s = "aGQ1Afik6NampDT5sJEQE4Z0wpsMw0IDAD06rrSswXrKzJ5Cg0G=";
+
+            // Token: 0x04000003 RID: 3
+            private static string strHashName = "SHA1";
+
+            // Token: 0x04000004 RID: 4
+            private static int iterations = 2;
+
+            // Token: 0x04000005 RID: 5
+            private static int num = 256;
+
+            // Token: 0x04000006 RID: 6
+            private static string s2 = "@bbd1ec93108b0cb";
+        }
+    }
+    ```
+
+    Chức năng chính của hàm Encrypt:
+
+    - **Input:** Chuỗi đầu vào mà bạn muốn mã hóa.
+
+    - **Salt (s) và mật khẩu (strPassword):** Được sử dụng để tạo khóa mã hóa.
+
+        Sử dụng lớp `PasswordDeriveBytes` để lấy khóa mã hóa từ mật khẩu `strPassword` và muối `s`. Hàm băm `SHA1` được dùng trong quá trình này với số vòng lặp là `2` (`iterations`).
+
+        Kết quả của việc tạo khóa là một chuỗi byte dài `256` bit (32 byte), vì biến `num` là 256.
+
+    - **IV (s2):** Được dùng để khởi tạo quá trình mã hóa.
+
+    - **RijndaelManaged:** Được dùng như thuật toán mã hóa với chế độ `CBC`.
+
+        Thuật toán được sử dụng là `RijndaelManaged` (AES).
+        
+        Chế độ mã hóa được chọn là Mode = 1 tương ứng với CBC.
+
+        Hàm `CreateEncryptor` sử dụng khóa mã hóa và vector khởi tạo (IV) để tạo bộ mã hóa (encryptor).
+
+    - **Kết quả:** Chuỗi mã hóa đã được chuyển sang Base64.
+
+    Như vậy `Key` của phần mã hóa `AES` này không hiện trực tiếp mà chúng ta cần phải tự tìm. Có thể sử dụng `dnSpy` debug rùi đọc giá trị của nó hoặc có thể viết bằng ngôn ngữ C# để tìm được Key.
+
+    ```C#
+    using System;
+    using System.Security.Cryptography;
+    using System.Text;
+
+    namespace AES_Encryption
+    {
+        class Program
+        {
+            // Các giá trị tĩnh sử dụng để sinh khóa
+            private static string strPassword = "amp4Z0wpKzJ5Cg0GDT5sJD0sMw0IDAsaGQ1Afik6NwXr6rrSEQE=";
+            private static string s = "aGQ1Afik6NampDT5sJEQE4Z0wpsMw0IDAD06rrSswXrKzJ5Cg0G=";
+            private static string strHashName = "SHA1";
+            private static int iterations = 2;
+            private static int num = 256;
+
+            static void Main(string[] args)
+            {
+                byte[] saltBytes = Encoding.ASCII.GetBytes(s);
+                byte[] keyBytes = new PasswordDeriveBytes(strPassword, saltBytes, strHashName, iterations).GetBytes(num / 8);
+                Console.WriteLine("Key Bytes (Hex): " + BitConverter.ToString(keyBytes).Replace("-", ""));
+            }
+        }
+    }
+
+    // 34886D5B097A941978D0E38B1B5CA32960746A5E5D648711B12C67AA5B3A8EBF
+    ```
+
+    Sau khi có đủ hết tất Key, IV thì chúng ta thực hiện tìm string mã hóa thoai, thì nó ở đây:
+
+    ![alt text](IMG/1/image-4.png)
+
+    ```txt
+    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
+    ```
+
+    Bây giờ chúng ta ném lên CycberChef thoai:
+
+    ![alt text](IMG/1/image-5.png)
+    
+    Thêm một lần base64 nữa là chúng ta tìm được flag:
+
+    ![alt text](IMG/1/image-6.png)
+
+- Flag:
+
+    ```txt
+    KCSC{anh khong muon boc dau vi anh khong co em dang sau <3}
+    ```
 
 # 2_TUNG_QUEN (warmup)
 
