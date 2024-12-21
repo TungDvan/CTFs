@@ -221,6 +221,16 @@
 
     - Chương trình thực hiện mã hóa input bằng thuật toán AES mode CBC, với `key` cố định là `DF07382F4AFC180322896590E0C40E93100431CE49578379C413295A74266099`, còn IV `là` 16 byte random thì hàm `srand()`.
 
+        ![alt text](IMG/3/image-13.png)
+
+        Hàm này thực hiện mã hóa, ta thấy những tham số truyền vào hàm này gồm **chiều dài input ban đầu**; **input**; **chiều dài input sau khi thực hiện padding** (`PKCS7 Padding`: được sử dụng để đảm bảo rằng dữ liệu có độ dài phù hợp với yêu cầu của thuật toán mã hóa khối ví dụ như AES); **dải 32 byte**; mảng byte random **16 byte**.
+        
+        Bên trong hàm ENCRYPT có đoạn biến đổi sử dụng đến SBOX:
+
+        ![alt text](IMG/3/image-14.png)
+
+        Như vậy đến đây có thể đoán chương trình đang thực hiễn mã hóa bằng thuật toán AES, với key 32byte cố định, còn IV là 16 byte random kia, sau vài lần thử ta có thể chắc chắn là chương trình đang thực hiện mã hóa bằng AES
+
     - Sau khi thực hiện mã hóa xong thì chương trình sẽ lấy `IV` ghép với `input` đã được mã hóa rùi thực hiện mã hóa bằng `base64` (mã hóa base64 nhưng mà bị có chút thay đổi là ký tự in thường sẽ chuyển sang ký tự in hoa và ngược lại).
 
         ![alt text](IMG/3/image-12.png)
