@@ -1728,12 +1728,221 @@
     KCSC{The_m1xture_mak3_hard_challenge_4_y0u!!!}
     ```
 
+# 9_CHACHACHA (MEDIUM_DONE)
 
+- Chall: [FILE](CHALL/9_ChaChaCha.zip).
 
+- Bài cho chúng ta 3 file, 1 file thực thi, 1 file dmp và 1 file encrypt. Ta thực hiện debug file thực thi thì thấy hàm main như sau:
 
+    ```C
+    int __cdecl main(int argc, const char **argv, const char **envp)
+    {
+    HMODULE LibraryA; // eax
+    BOOLEAN (__stdcall *SystemFunction036)(PVOID, ULONG); // eax
+    HMODULE v5; // eax
+    BOOLEAN (__stdcall *ProcAddress)(PVOID, ULONG); // eax
+    HANDLE FileW; // eax
+    void *v8; // ebx
+    signed int FileSize; // edi
+    _BYTE *file_write; // ebx
+    int v12; // ecx
+    signed int v13; // esi
+    signed int v14; // ebx
+    _BYTE *v15; // eax
+    _BYTE *v16; // ecx
+    char v17; // al
+    HANDLE hFile; // [esp+Ch] [ebp-CCh]
+    signed int v19; // [esp+10h] [ebp-C8h]
+    char *v20; // [esp+14h] [ebp-C4h]
+    _BYTE *_file_write; // [esp+18h] [ebp-C0h]
+    char *v22; // [esp+1Ch] [ebp-BCh]
+    DWORD NumberOfBytesWritten; // [esp+20h] [ebp-B8h] BYREF
+    DWORD NumberOfBytesRead; // [esp+24h] [ebp-B4h] BYREF
+    char v25[48]; // [esp+28h] [ebp-B0h] BYREF
+    int v26; // [esp+58h] [ebp-80h]
+    char v27[64]; // [esp+68h] [ebp-70h] BYREF
+    char key[32]; // [esp+A8h] [ebp-30h] BYREF
+    unsigned __int8 nounce[12]; // [esp+C8h] [ebp-10h] BYREF
 
+    LibraryA = LoadLibraryA("advapi32.dll");
+    SystemFunction036 = (BOOLEAN (__stdcall *)(PVOID, ULONG))GetProcAddress(LibraryA, "SystemFunction036");
+    SystemFunction036(key, 32);
+    v5 = LoadLibraryA("advapi32.dll");
+    ProcAddress = (BOOLEAN (__stdcall *)(PVOID, ULONG))GetProcAddress(v5, "SystemFunction036");
+    ProcAddress(nounce, 12);
+    FileW = CreateFileW(FileName, 0xC0000000, 0, 0, 3u, 0x80u, 0);
+    v8 = FileW;
+    hFile = FileW;
+    if ( FileW == (HANDLE)-1 )
+    {
+        print("Cannot Open File");
+        CloseHandle((HANDLE)0xFFFFFFFF);
+        return 1;
+    }
+    else
+    {
+        FileSize = GetFileSize(FileW, 0);
+        v19 = FileSize;
+        v20 = (char *)malloc(FileSize);
+        if ( ReadFile(v8, v20, FileSize, &NumberOfBytesRead, 0) )
+        {
+        file_write = malloc(FileSize);
+        _file_write = file_write;
+        sub_4F13D0(v25, (unsigned __int8 *)key, v12, nounce);
+        v13 = 0;
+        if ( FileSize > 0 )
+        {
+            v22 = v27;
+            do
+            {
+            sub_4F1000((__m128i *)v25, (int)v27);
+            ++v26;
+            v14 = v13 + 64;
+            if ( !__OFSUB__(v13, v13 + 64) )
+            {
+                v15 = _file_write;
+                do
+                {
+                if ( v13 >= FileSize )
+                    break;
+                v16 = &v15[v13];
+                v17 = v22[v13] ^ v15[v13 + v20 - _file_write];
+                ++v13;
+                FileSize = v19;
+                *v16 = v17;
+                v15 = _file_write;
+                }
+                while ( v13 < v14 );
+            }
+            v22 -= 64;
+            v13 = v14;
+            }
+            while ( v14 < FileSize );
+            file_write = _file_write;
+        }
+        SetFilePointer(hFile, 0, 0, 0);
+        if ( WriteFile(hFile, file_write, FileSize, &NumberOfBytesWritten, 0) )
+        {
+            CloseHandle(hFile);
+            print("Some important file has been encrypted!!!\n", FileName);
+            return 0;
+        }
+        else
+        {
+            print("Cannot Write File");
+            CloseHandle(hFile);
+            return 1;
+        }
+        }
+        else
+        {
+        print("Cannot Read File");
+        CloseHandle(v8);
+        return 1;
+        }
+    }
+    }
+    ```
 
+- Ta phân tích từng phần trong hàm `main()`:
 
+    - `(1):` Load thư viện và tải những hàm cần thiết.
 
+        ![alt text](IMG/7/image-3.png)
 
+        Chương trình thực hiện tải thư viện `advapi32.dll` và lấy địa chỉ của hàm `SystemFunction036` từ thư viện đó.
+
+        Hàm `SystemFunction036` được sử dụng để tạo ra các giá trị ngẫu nhiên hoặc thực hiện các thao tác liên quan đến mật mã. Như vậy lúc này chương trình đang thực hiện tạo ra những giá trị ngẫu nhiên 32 byte và 12 byte.
+
+    - `(2):` Mở tập tin và đọc dữ liệu.
+
+        ![alt text](IMG/7/image-2.png)
+
+        Chương trình mở một tệp có tên là `important_note.txt` với quyền đọc và ghi, lấy kích thước của tệp đó và cấp phát bộ nhớ để chứa dữ liệu tệp tin (dùng hàm ReadFile để đọc nội dung tệp đó).
+
+    - `(3):` Mã hóa dữ liệu.
+
+        Gọi hàm `sub_4F13D0`, truyền vào mảng `random_12byte` và `random_32byte` để tạo ra một dữ liệu mã hóa cho tệp tin. Hàm này có thể thực hiện một phép toán mã hóa hoặc tạo ra một chuỗi mã hóa dựa trên 2 tham số trên.
+
+        ![alt text](IMG/7/image-4.png)
+
+        Sau khi tra chatGPT thì tui được gợi ý một thuật toán mã hóa tên là `ChaCha20`, sau khi liên tưởng tới tên bài này thì tui đoán chương trình đang thực hiện mã hóa dữ liệu bằng thuật toán ChaCha20. Và hàm `sub_4F13D0` thực hiện quá trình khởi tạo trạng thái (state) trong thuật toán mã hóa ChaCha. Nó kết hợp các giá trị từ `key 32 byte` và `nonce 12 byte` để tạo ra một bộ dữ liệu khởi tạo cho ChaCha.
+
+        Sau khi khởi tạo trạng thái state thì chương gọi hàm `sub_4F1000` để thực hiện mã hóa ChaCha20 (confirm by ChatGPT)
+
+        ![alt text](IMG/7/image-5.png)
+
+    - `(4):` Sau khi mã hóa xong thì sẽ thực hiện ghi lại vào file `important_note.txt` và in ra thông báo.
+
+        ![alt text](IMG/7/image-6.png)
+
+- Như vậy sau khi biết được chức năng chính của hàm `main()` và thuật toán mã hóa chính của chương trình thì ta sẽ thực hiện tìm xem những tham số cần thiết cho mã hóa `ChaCha20` đó là `key` và `nounce`.
+
+- `Key` là một giá trị 32 byte còn `nounce` là một giá trị 12 byte, nhưng mà trong bài này `key` và `nouce` lại được lấy random, vậy làm sao ta có thể tìm thấy `key` và `nouce`. Thật may vì tác giả cho cho chúng ta một file `dmp`. Ta cùng phân tích file dmp đó để có thể tìm được `key` và `nouce`. 
+
+- Ta thực hiện mở file bằng IDA ta sẽ thấy như sau:
+
+    ![alt text](IMG/7/image-7.png)
+
+    Ta lướt lên một đoạn rùi thực hiện make code byte `0x55`.
+
+    ![alt text](IMG/7/image-8.png)
+
+    Tại sao lại là `0x55`, vì đó là opcode tương ứng cho lệnh `push ebp`, một lệnh thường thường thấy khi bắt đầu một hàm.
+
+    ![alt text](IMG/7/image-10.png)
+
+    Sau khi make code thì ta thấy được chương trình đang dừng lại ở một hàm như sau.
+
+    ![alt text](IMG/7/image-9.png)
+
+    Ta thấy hàm này chính là hàm thực hiện quá trình khởi tạo trạng thái (state), có tham số truyền vào là `key` và `nounce`. Vậy ta có một ý tưởng có thể lấy `key` và `nouce` ở chính điểm dừng này. 
+    
+    Ta để ý một chút là `key` và `nounce` được truyền vào trong hàm này là một dải data liên tiếp, tức là 32 byte `key` rùi đến 12 byte `nounce` lun, và 2 giá trị này trước khi truyền vào hàm là được lưu ở thanh `eax` và thanh `edx`.
+
+    ![alt text](IMG/7/image-13.png)
+
+    ![alt text](IMG/7/image-12.png)
+
+    Và sau khi kết thúc hàm này thì ta nhận thấy thanh ghi `edx` vẫn lưu giá trị của `nouce`, như vậy ở file `dmp` ta thấy có một điểm dừng ở cuối hàm trên, như vậy lúc này ta chỉ cần lấy trực tiếp những giá trị từ thanh ghi edx trỏ tới là ta có thể lấy được key và nouce để mã hóa trong bài này.
+
+    ![alt text](IMG/7/image-15.png)
+
+    Couter trong bài này là giá trị `0x4353434B`, được khởi tạo ở trong hàm khởi tạo trạng thái state.
+
+    ![alt text](IMG/7/image-16.png)
+
+    ```py
+    key = [
+        0xD9, 0xFA, 0xBB, 0x42, 0x0C, 0x2D, 0xB8, 0x08, 0xD1, 0xF8, 
+        0xBF, 0xA5, 0x89, 0x0A, 0xC3, 0xB3, 0x84, 0x9F, 0x69, 0xE2, 
+        0xF3, 0x30, 0xD4, 0xA9, 0x0D, 0xB1, 0x19, 0xBD, 0x4E, 0xA0, 
+        0xB8, 0x30
+    ]
+
+    nouce = [
+        0xDB, 0x7B, 0xE6, 0x93, 0xEE, 0x9B, 0xC1, 0xA4, 0x70, 0x73, 
+        0xCA, 0x4B
+    ]
+
+    count = 0x4353434B
+    ```
+
+- Ta thực hiện ném file lên cycber chef:
+
+    ![alt text](IMG/7/image-17.png)
+
+    Sau khi mã hóa được ta được một file thực thi, thực hiện run file đó ta được nội dung như sau.
+
+    ![alt text](IMG/7/image-19.png)
+
+    ![alt text](IMG/7/image-20.png)
+
+    Ta đưa vào die để nhận dạng đó là file ảnh rùi thực hiện đổi định dạng file `jpeg`:
+
+    ![alt text](IMG/7/image-21.png)
+
+    ```txt
+    KCSC{chachacha_w1th_me_and_welc0me_2_KCSC}
+    ```
 
