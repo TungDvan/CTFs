@@ -1244,7 +1244,7 @@
 
 - Chall: [FILE](CHALL/8_OptimusPrize.zip).
 
-- Khi thực thi chương trình này thì ta nhận thấy chương trình này có nhiệm vụ là in lần lượt từng kí tự của flag ra, vì tui là một con người kiên nhẫn nên tui đã ngồi đợi và lấy được [FLAG](8_OptimusPrize_medium\8_OptimusPrize\uhmmm\readme.md) là:
+- Khi thực thi chương trình này thì ta nhận thấy chương trình này có nhiệm vụ là in lần lượt từng kí tự của flag ra, vì tui là một con người kiên nhẫn nên tui đã ngồi đợi và lấy được [FLAG](8_OptimusPrize_medium/8_OptimusPrize/uhmmm/readme.md) là:
 
     ```txt
     KCSC{just_a_sort_of_O-OoOptim...ize_references}
