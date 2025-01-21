@@ -1,0 +1,59 @@
+#include <windows.h>
+#include <wincrypt.h>
+#include <iostream>
+#include <cstring> 
+
+
+int main() {
+	HCRYPTPROV phProv;
+	HCRYPTHASH phHash;
+	HCRYPTKEY phKey;
+	char link_youtube[100] = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+	unsigned char flag[40] = {
+		0x74, 0x75, 0x6E, 0x67, 0x64, 0x76, 0x61, 0x6E, 0x74, 0x75,
+		0x6E, 0x67, 0x64, 0x76, 0x61, 0x6E, 0x74, 0x75, 0x6E, 0x67,
+		0x64, 0x76, 0x61, 0x6E, 0x74, 0x75, 0x6E, 0x67, 0x64, 0x76,
+		0x61, 0x6E, 0x74, 0x75, 0x6E, 0x67, 0x64, 0x76, 0x61, 0x6E
+	};
+
+	unsigned char flag_en[40] = {
+		0xE7, 0x7B, 0xFA, 0xF3, 0xF0, 0x7F, 0x0E, 0xD6, 0x37, 0x2B,
+		0xBE, 0xCB, 0xF7, 0x61, 0xF1, 0xDC, 0xF4, 0x45, 0xBC, 0xA5,
+		0x0B, 0x81, 0x5D, 0xD1, 0x65, 0x4A, 0x5F, 0xAE, 0x59, 0x3B,
+		0x0B, 0xCB, 0xCC, 0x17, 0x9B, 0x7E, 0x55, 0xA0, 0x18, 0xB5
+	};
+	if (!CryptAcquireContextA(&phProv, 0, 0, 1, 0)) {
+		printf("Error CryptAcquireContextA");
+	}
+
+	if (!CryptCreateHash(phProv, 0x8004, 0, 0, &phHash)) {
+		printf("Error CryptCreateHash");
+	}
+
+	if (!CryptHashData(phHash, (BYTE *)link_youtube, 43, 0)) {
+		printf("Error CryptHashData");
+	}
+
+	if (!CryptDeriveKey(phProv, 0x6801, phHash, 0, &phKey)) {
+		printf("Error CryptDeriveKey");
+	}
+
+	if (!CryptDestroyHash(phHash)) {
+		printf("Error CryptDestroyHash");
+	}
+	DWORD pdwDataLen = 40;
+	DWORD dwBufLen = 0x29;
+	//if (!CryptEncrypt(phKey, 0, TRUE, 0, (BYTE*)flag, &pdwDataLen, dwBufLen)) {
+	//	printf("Error CryptEncrypt");
+	//}
+
+	if (!CryptDecrypt(phKey, 0, TRUE, 0, (BYTE*)flag_en, &pdwDataLen)) {
+		printf("Error CryptDecrypt");
+	}
+
+	for (int i = 0; i < 40; i++) printf("%c", flag_en[i]);
+
+
+	//printf("Hello ban nho");
+	return 0;
+}
