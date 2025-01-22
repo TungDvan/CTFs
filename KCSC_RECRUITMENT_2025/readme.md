@@ -108,7 +108,7 @@
     }
     ```
 
-    Hàm này thực hiện mã hóa 40 kí tự của input theo quy luật: Mỗi kí tự của `input` sẽ thực hiện biến đổi `5` lần, trong đó mỗi vòng lần sẽ thực hiện `xor` input với `2` giá trị (**giá trị 1** là giá trị dịch bit trái của kí tự đó `v5` bit và **giá trị 2** là giá trị dịch bit phải của kí tự đó `v6` bit. Chú ý mỗi vòng lặp thì giá trị của `v5` và `v6` sẽ gấp đôi giá trị của vòng lặp trước đó). 
+    Hàm này thực hiện mã hóa 40 kí tự của input theo quy luật: Mỗi kí tự của `input` sẽ thực hiện biến đổi `5` lần, trong đó mỗi vòng lần sẽ thực hiện `xor` input với `2` giá trị (**giá trị 1** là giá trị dịch bit trái của kí tự đó `v5` bit và **giá trị 2** là giá trị dịch bit phải của kí tự đó `v6` bit (Chú ý mỗi vòng lặp thì giá trị của `v5` và `v6` sẽ gấp đôi giá trị của vòng lặp trước đó). 
 
 - Sau khi mã hóa xong thì chương trình sẽ kiểm tra với dải `flag_en[]`, nếu khớp thì sẽ trả về thành công. Lúc này ta thực hiện brute force để tìm flag:
 
@@ -295,7 +295,7 @@
 
         ![alt text](IMG/3/image-2.png)
 
-    - Xor `input` sau khi mã hóa base64 với daira data `xor_base64[]`:
+    - Xor `input` sau khi mã hóa base64 với dải data `xor_base64[]`:
 
         ![alt text](IMG/3/image-3.png)
 
@@ -2462,3 +2462,7 @@
     ```
 
     ![alt text](IMG/10_1/image-20.png)
+
+# LỜI KẾT
+
+Write up này là ý kiến và suy nghĩ cá nhân của mình trong lúc làm bài, có những kiến thức mình mới được tiếp nhận nên có thể có sai sót, nếu có chỗ nào nhầm lẫn mình rất mong nhận được gớp ý từ mọi người. Cảm ơn mọi ngưỡi đã tham khảo write up này.
