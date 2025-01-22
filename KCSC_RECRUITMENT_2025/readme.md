@@ -2465,4 +2465,4 @@
 
 # LỜI KẾT
 
-Write up này là ý kiến và suy nghĩ cá nhân của mình trong lúc làm bài, có những kiến thức mình mới được tiếp nhận nên có thể có sai sót, nếu có chỗ nào nhầm lẫn mình rất mong nhận được gớp ý từ mọi người. Cảm ơn mọi ngưỡi đã tham khảo write up này.
+Write up này là ý kiến và suy nghĩ cá nhân của mình trong lúc làm bài, có những kiến thức mình mới được tiếp nhận nên có thể có sai sót, nếu có chỗ nào nhầm lẫn mình rất mong nhận được góp ý từ mọi người. Cảm ơn mọi người đã tham khảo write up này (^.^).
